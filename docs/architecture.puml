@@ -1,0 +1,55 @@
+@startuml architecture
+
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v14.0/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/Storage/S3.puml
+!include AWSPuml/Database/DynamoDB.puml
+!include AWSPuml/Compute/Lambda.puml
+!include AWSPuml/ApplicationIntegration/APIGateway.puml
+!include AWSPuml/ApplicationIntegration/SimpleEmailService.puml
+!include AWSPuml/MachineLearning/Textract.puml
+
+actor User
+
+rectangle "Frontend" {
+  component [React App] as frontend
+}
+
+rectangle "AWS Cloud" {
+  APIGateway(api, "API Gateway", "REST API")
+  
+  Lambda(apiHandler, "ApiHandler", "Lambda")
+  Lambda(imageOcr, "ImageOCR", "Lambda")
+  Lambda(mailIngest, "MailIngest", "Lambda")
+  Lambda(mailSend, "MailSend", "Lambda")
+  
+  S3(docBucket, "Documents Bucket", "S3")
+  S3(faxBucket, "FAX Bucket", "S3")
+  
+  DynamoDB(docTable, "Documents Table", "DynamoDB")
+  
+  SimpleEmailService(ses, "SES", "Email Service")
+  
+  Textract(textract, "Textract", "OCR Service")
+}
+
+User --> frontend : アクセス
+frontend --> api : API呼び出し
+api --> apiHandler : リクエスト
+
+apiHandler --> docTable : CRUD操作
+apiHandler --> docBucket : 署名付きURL生成
+
+frontend --> faxBucket : FAXアップロード
+faxBucket --> imageOcr : S3イベント
+imageOcr --> textract : OCR処理
+imageOcr --> docTable : メタデータ保存
+
+ses --> mailIngest : メール受信
+mailIngest --> docBucket : 添付ファイル保存
+mailIngest --> docTable : メタデータ保存
+
+api --> mailSend : メール送信リクエスト
+mailSend --> ses : メール送信
+
+@enduml
