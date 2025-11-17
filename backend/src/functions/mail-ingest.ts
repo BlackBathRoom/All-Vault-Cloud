@@ -22,7 +22,7 @@ export const handler = async (event: SESEvent) => {
 
             // メール本文を取得（S3から）
             // SESはメールをS3に保存する設定を前提
-            const emailContent = await parseEmail(sesRecord)
+            const emailContent = await parseEmail(record)
 
             // 添付ファイルを保存
             if (emailContent.attachments && emailContent.attachments.length > 0) {
