@@ -1,31 +1,54 @@
-import { simpleParser, Attachment, ParsedMail, AddressObject } from 'mailparser'
+import { simpleParser, Attachment, AddressObject, ParsedMail } from 'mailparser'
 import { ParsedEmail } from './types'
+import { SESEventRecord } from 'aws-lambda'
 
+/**
+ * AddressObject | AddressObject[] | undefined → string に変換
+ */
 const addressToText = (
-    addr: AddressObject | AddressObject[] | undefined ): string => {
+    addr?: AddressObject | AddressObject[]
+): string => {
     if (!addr) return ''
-
-    if (Array.isArray(addr)) {
-        // 配列なら text を結合 or 先頭だけでも OK
-        return addr.map(a => a.text).join(', ')
-    }
-
-    return addr.text
+    return Array.isArray(addr)
+        ? addr.map(a => a.text).join(', ')
+        : addr.text
 }
 
+/**
+ * AddressObject | AddressObject[] | undefined → string[] に変換
+ */
 const addressToTextArray = (
-    addr: AddressObject | AddressObject[] | undefined
+    addr?: AddressObject | AddressObject[]
 ): string[] => {
     if (!addr) return []
-
-    if (Array.isArray(addr)) {
-        return addr.map(a => a.text)
-    }
-
-    return [addr.text]
+    return Array.isArray(addr)
+        ? addr.map(a => a.text)
+        : [addr.text]
 }
 
-export const parseEmailFromBuffer = async (buffer: Buffer): Promise<ParsedEmail> => {
+/**
+ * SES のイベント（Lambda）からメール情報を抽出（簡易版）
+ */
+export const parseEmail = async (
+    sesRecord: SESEventRecord
+): Promise<ParsedEmail> => {
+    const parsed = {
+        from: sesRecord.ses.mail.commonHeaders.from?.[0] || 'unknown',
+        to: sesRecord.ses.mail.commonHeaders.to || [],
+        subject: sesRecord.ses.mail.commonHeaders.subject || 'No Subject',
+        text: 'Email body will be parsed from S3',
+        attachments: [],
+    }
+
+    return parsed
+}
+
+/**
+ * S3 から取得した EML バッファを mailparser で解析
+ */
+export const parseEmailFromBuffer = async (
+    buffer: Buffer
+): Promise<ParsedEmail> => {
     const parsed: ParsedMail = await simpleParser(buffer)
 
     return {
