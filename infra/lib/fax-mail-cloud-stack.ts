@@ -5,6 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as apigateway from 'aws-cdk-lib/aws-apigateway'
 import * as ses from 'aws-cdk-lib/aws-ses'
+import * as sesActions from 'aws-cdk-lib/aws-ses-actions'
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
@@ -160,6 +161,29 @@ export class FaxMailCloudStack extends cdk.Stack {
             new s3n.LambdaDestination(imageOcrFunction),
             { prefix: 'uploads/raw/' }
         )
+
+        // SES Email Receiving
+        // SES受信ルールセットの作成
+        const receiptRuleSet = new ses.ReceiptRuleSet(this, 'FaxMailReceiptRuleSet', {
+            receiptRuleSetName: 'fax-mail-receipt-rules',
+        })
+
+        // SES受信ルール: メールをS3に保存してからLambdaを実行
+        const receiptRule = receiptRuleSet.addRule('FaxMailReceiptRule', {
+            recipients: [], // 空の場合は全てのメールを受信
+            scanEnabled: true, // スパム・ウイルススキャンを有効化
+            actions: [
+                // 1. S3にEMLファイルを保存
+                new sesActions.S3({
+                    bucket: faxSystemBucket,
+                    objectKeyPrefix: 'ses-raw-mail/',
+                }),
+                // 2. MailIngestFunctionを呼び出し
+                new sesActions.Lambda({
+                    function: mailIngestFunction,
+                }),
+            ],
+        })
 
         // API Gateway
         const api = new apigateway.RestApi(this, 'FaxMailCloudApi', {
