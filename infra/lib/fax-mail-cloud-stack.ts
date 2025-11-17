@@ -50,6 +50,32 @@ export class FaxMailCloudStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.DESTROY,
         })
 
+        // GSI: type と createdAt で検索可能に
+        documentsTable.addGlobalSecondaryIndex({
+            indexName: 'type-createdAt-index',
+            partitionKey: {
+                name: 'type',
+                type: dynamodb.AttributeType.STRING,
+            },
+            sortKey: {
+                name: 'createdAt',
+                type: dynamodb.AttributeType.STRING,
+            },
+        })
+
+        // GSI: sender と createdAt で検索可能に
+        documentsTable.addGlobalSecondaryIndex({
+            indexName: 'sender-createdAt-index',
+            partitionKey: {
+                name: 'sender',
+                type: dynamodb.AttributeType.STRING,
+            },
+            sortKey: {
+                name: 'createdAt',
+                type: dynamodb.AttributeType.STRING,
+            },
+        })
+
         // Lambda Functions
         const imageOcrFunction = new NodejsFunction(this, 'ImageOCRFunction', {
             entry: path.join(__dirname, '../../backend/dist/functions/image-ocr.js'),
