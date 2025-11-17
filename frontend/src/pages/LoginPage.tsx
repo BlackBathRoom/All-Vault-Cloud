@@ -28,26 +28,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#181f2a] to-[#232b38]">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl flex flex-col items-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#181f2a] to-[#232b38] px-8 xs:px-6 sm:px-8 md:px-16 lg:px-24 py-4 xs:py-6 sm:py-8 md:py-16">
+      <div className="w-full max-w-[280px] xs:max-w-[320px] sm:max-w-[360px] md:max-w-md lg:max-w-lg mx-auto p-4 xs:p-5 sm:p-6 md:p-10 lg:p-12 space-y-3 xs:space-y-4 sm:space-y-5 md:space-y-8 bg-white rounded-xl sm:rounded-2xl shadow-xl flex flex-col items-center">
         <div className="flex flex-col items-center">
-          <div className="bg-[#374151] rounded-full p-4 mb-2">
-            <svg width="36" height="36" fill="none" viewBox="0 0 24 24">
+          <div className="bg-[#374151] rounded-full p-2 xs:p-3 sm:p-4 mb-1 xs:mb-2">
+            <svg className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8" fill="none" viewBox="0 0 24 24">
               <path d="M6 10V8a6 6 0 1 1 12 0v2h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1Z" 
                     fill="#ffffff"/>
               <path d="M8 8v2h8V8a4 4 0 1 0-8 0Z" 
                     fill="#374151"/>
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-center text-gray-900">ようこそ</h2>
-          <p className="text-gray-500 text-sm text-center mb-2">アカウントにログインしてください</p>
+          <h2 className="text-base xs:text-lg sm:text-xl font-bold text-center text-gray-900">ようこそ</h2>
+          <p className="text-gray-500 text-xs xs:text-xs sm:text-sm text-center mb-1 xs:mb-2">アカウントにログインしてください</p>
         </div>
         <form className="w-full space-y-4" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">メールアドレス</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M2 6.5A2.5 2.5 0 0 1 4.5 4h15A2.5 2.5 0 0 1 22 6.5v11A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-11Zm1.6.6 8.4 6.3 8.4-6.3M20 7.2l-7.6 5.7a1 1 0 0 1-1.2 0L4 7.2" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24"><path d="M2 6.5A2.5 2.5 0 0 1 4.5 4h15A2.5 2.5 0 0 1 22 6.5v11A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-11Zm1.6.6 8.4 6.3 8.4-6.3M20 7.2l-7.6 5.7a1 1 0 0 1-1.2 0L4 7.2" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </span>
               <Input
                 id="email"
@@ -66,7 +66,7 @@ export default function LoginPage() {
             <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-1">パスワード</label>
             <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24">
                         <path d="M6 10V8a6 6 0 1 1 12 0v2h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1Z" 
                               fill="#bdbdbd"/>
                         <path d="M8 8v2h8V8a4 4 0 1 0-8 0Z" 
@@ -94,16 +94,16 @@ export default function LoginPage() {
                     onCheckedChange={v => setRemember(!!v)}
                     className="bg-gray-300 border-gray-300 data-[state=checked]:bg-black data-[state=checked]:border-black data-[state=checked]:text-white w-4 h-4 min-w-4 min-h-4 rounded-none"
                 />
-                <span className="text-gray-700">ログイン状態を保持</span>
+                <span className="text-gray-700 text-[0.6rem] xs:text-sm sm:text-base">ログイン状態を保持</span>
             </label>
-            <a href="#" className="text-gray-500 hover:underline">パスワードを忘れた場合</a>
+            <a href="#" className="text-gray-500 hover:underline text-[0.6rem] xs:text-sm sm:text-base">パスワードを忘れた場合</a>
           </div>
           {/* エラー表示はAlert UIを使いたい場合はここに追加 */}
-          <Button type="submit" className="w-full mt-2 h-11 text-base font-semibold bg-black hover:bg-gray-800" disabled={loading}>
+          <Button type="submit" className="w-full mt-2 h-10 sm:h-11 text-sm sm:text-base font-semibold bg-black hover:bg-gray-800" disabled={loading}>
             {loading ? 'ログイン中...' : 'ログイン'}
           </Button>
         </form>
-        <div className="text-center text-sm text-gray-500 mt-2">
+        <div className="text-center text-xs xs:text-sm sm:text-base text-gray-500 mt-2">
           アカウントをお持ちでない場合は{' '}
           <a href="/newaccount" className="font-bold text-black hover:underline">新規登録</a>
         </div>
