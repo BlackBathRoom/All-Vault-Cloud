@@ -128,29 +128,43 @@ export class FaxMailCloudStack extends cdk.Stack {
         })
 
         // Permissions
-        faxSystemBucket.grantReadWrite(imageOcrFunction)
+        // ImageOCRFunction: uploads/raw/, uploads/text/, uploads/pdf/ の読み書き
+        faxSystemBucket.grantRead(imageOcrFunction, 'uploads/raw/*')
+        faxSystemBucket.grantWrite(imageOcrFunction, 'uploads/text/*')
+        faxSystemBucket.grantWrite(imageOcrFunction, 'uploads/pdf/*')
         documentsTable.grantReadWriteData(imageOcrFunction)
 
-        faxSystemBucket.grantReadWrite(mailIngestFunction)
+        // MailIngestFunction: ses-raw-mail/, emails/text/, docs/email/ の読み書き
+        faxSystemBucket.grantRead(mailIngestFunction, 'ses-raw-mail/*')
+        faxSystemBucket.grantWrite(mailIngestFunction, 'emails/text/*')
+        faxSystemBucket.grantWrite(mailIngestFunction, 'docs/email/*')
         documentsTable.grantReadWriteData(mailIngestFunction)
 
-        faxSystemBucket.grantReadWrite(apiHandlerFunction)
+        // ApiHandlerFunction: 全prefix読み取り、uploads/raw/ への書き込み(presigned URL用)
+        faxSystemBucket.grantRead(apiHandlerFunction)
+        faxSystemBucket.grantPut(apiHandlerFunction, 'uploads/raw/*')
         documentsTable.grantReadData(apiHandlerFunction)
 
+        // MailSendFunction: SES送信権限とS3読み取り(PDF添付用)
+        faxSystemBucket.grantRead(mailSendFunction)
         mailSendFunction.addToRolePolicy(
             new iam.PolicyStatement({
                 actions: ['ses:SendEmail', 'ses:SendRawEmail'],
-                resources: ['*'],
+                resources: [
+                    `arn:aws:ses:${this.region}:${this.account}:identity/*`,
+                ],
             })
         )
 
+        // ImageOCRFunction: Textract権限
         imageOcrFunction.addToRolePolicy(
             new iam.PolicyStatement({
                 actions: [
+                    'textract:DetectDocumentText',
                     'textract:StartDocumentTextDetection',
                     'textract:GetDocumentTextDetection',
                 ],
-                resources: ['*'],
+                resources: ['*'], // Textractは特定のリソースARNを持たない
             })
         )
 
