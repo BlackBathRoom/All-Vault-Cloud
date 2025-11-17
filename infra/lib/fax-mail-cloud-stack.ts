@@ -82,11 +82,18 @@ export class FaxMailCloudStack extends cdk.Stack {
             entry: path.join(__dirname, '../../backend/dist/functions/image-ocr.js'),
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,
+            memorySize: 1024, // OCR処理のため多めに確保
             timeout: cdk.Duration.minutes(5),
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
                 REGION: this.region,
+                NODE_OPTIONS: '--enable-source-maps',
+            },
+            bundling: {
+                minify: true,
+                sourceMap: true,
+                externalModules: ['@aws-sdk/*'], // AWS SDK v3はLambdaランタイムに含まれる
             },
         })
 
@@ -94,11 +101,18 @@ export class FaxMailCloudStack extends cdk.Stack {
             entry: path.join(__dirname, '../../backend/dist/functions/mail-ingest.js'),
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,
-            timeout: cdk.Duration.minutes(5),
+            memorySize: 512, // メール解析用
+            timeout: cdk.Duration.minutes(3),
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
                 REGION: this.region,
+                NODE_OPTIONS: '--enable-source-maps',
+            },
+            bundling: {
+                minify: true,
+                sourceMap: true,
+                externalModules: ['@aws-sdk/*'],
             },
         })
 
@@ -106,11 +120,18 @@ export class FaxMailCloudStack extends cdk.Stack {
             entry: path.join(__dirname, '../../backend/dist/functions/api-handler.js'),
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,
+            memorySize: 256, // API処理は軽量
             timeout: cdk.Duration.seconds(30),
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
                 REGION: this.region,
+                NODE_OPTIONS: '--enable-source-maps',
+            },
+            bundling: {
+                minify: true,
+                sourceMap: true,
+                externalModules: ['@aws-sdk/*'],
             },
         })
 
@@ -118,12 +139,19 @@ export class FaxMailCloudStack extends cdk.Stack {
             entry: path.join(__dirname, '../../backend/dist/functions/mail-send.js'),
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,
+            memorySize: 256, // メール送信は軽量
             timeout: cdk.Duration.seconds(30),
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
                 REGION: this.region,
                 SENDER_EMAIL: 'noreply@example.com', // 要変更
+                NODE_OPTIONS: '--enable-source-maps',
+            },
+            bundling: {
+                minify: true,
+                sourceMap: true,
+                externalModules: ['@aws-sdk/*'],
             },
         })
 
