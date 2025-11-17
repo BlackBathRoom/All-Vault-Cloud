@@ -3,6 +3,7 @@ import { Construct } from 'constructs'
 import * as s3 from 'aws-cdk-lib/aws-s3'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
+import * as logs from 'aws-cdk-lib/aws-logs'
 import * as apigateway from 'aws-cdk-lib/aws-apigateway'
 import * as ses from 'aws-cdk-lib/aws-ses'
 import * as sesActions from 'aws-cdk-lib/aws-ses-actions'
@@ -84,6 +85,7 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             memorySize: 1024, // OCR処理のため多めに確保
             timeout: cdk.Duration.minutes(5),
+            logRetention: logs.RetentionDays.ONE_WEEK, // ログ保持期間: 1週間
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
@@ -103,6 +105,7 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             memorySize: 512, // メール解析用
             timeout: cdk.Duration.minutes(3),
+            logRetention: logs.RetentionDays.ONE_WEEK, // ログ保持期間: 1週間
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
@@ -122,6 +125,7 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             memorySize: 256, // API処理は軽量
             timeout: cdk.Duration.seconds(30),
+            logRetention: logs.RetentionDays.ONE_WEEK, // ログ保持期間: 1週間
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
@@ -141,6 +145,7 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             memorySize: 256, // メール送信は軽量
             timeout: cdk.Duration.seconds(30),
+            logRetention: logs.RetentionDays.ONE_WEEK, // ログ保持期間: 1週間
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
