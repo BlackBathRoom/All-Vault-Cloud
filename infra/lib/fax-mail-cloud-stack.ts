@@ -14,24 +14,29 @@ export class FaxMailCloudStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props)
 
-        // S3 Buckets
-        const documentsBucket = new s3.Bucket(this, 'DocumentsBucket', {
-            bucketName: `fax-mail-documents-${this.account}`,
+        // S3 Bucket (単一バケットでprefix構造により管理)
+        // prefix構造:
+        // - uploads/raw/     : FAX画像アップロード先
+        // - uploads/text/    : OCR抽出テキスト保存先
+        // - uploads/pdf/     : FAX PDF生成先
+        // - ses-raw-mail/    : SES受信メールのEML保存先
+        // - emails/text/     : メール本文テキスト保存先
+        // - docs/email/      : メール添付PDF保存先
+        const faxSystemBucket = new s3.Bucket(this, 'FaxSystemBucket', {
+            bucketName: `fax-system-${this.account}`,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             autoDeleteObjects: true,
             cors: [
                 {
-                    allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST],
+                    allowedMethods: [
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                    ],
                     allowedOrigins: ['*'],
                     allowedHeaders: ['*'],
                 },
             ],
-        })
-
-        const faxBucket = new s3.Bucket(this, 'FaxBucket', {
-            bucketName: `fax-mail-fax-${this.account}`,
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-            autoDeleteObjects: true,
         })
 
         // DynamoDB Table
@@ -52,7 +57,9 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             timeout: cdk.Duration.minutes(5),
             environment: {
+                BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
+                REGION: this.region,
             },
         })
 
@@ -62,8 +69,9 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             timeout: cdk.Duration.minutes(5),
             environment: {
-                BUCKET_NAME: documentsBucket.bucketName,
+                BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
+                REGION: this.region,
             },
         })
 
@@ -73,8 +81,9 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             timeout: cdk.Duration.seconds(30),
             environment: {
+                BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
-                BUCKET_NAME: faxBucket.bucketName,
+                REGION: this.region,
             },
         })
 
@@ -84,18 +93,21 @@ export class FaxMailCloudStack extends cdk.Stack {
             runtime: lambda.Runtime.NODEJS_20_X,
             timeout: cdk.Duration.seconds(30),
             environment: {
+                BUCKET_NAME: faxSystemBucket.bucketName,
+                TABLE_NAME: documentsTable.tableName,
+                REGION: this.region,
                 SENDER_EMAIL: 'noreply@example.com', // 要変更
             },
         })
 
         // Permissions
-        faxBucket.grantReadWrite(imageOcrFunction)
+        faxSystemBucket.grantReadWrite(imageOcrFunction)
         documentsTable.grantReadWriteData(imageOcrFunction)
 
-        documentsBucket.grantReadWrite(mailIngestFunction)
+        faxSystemBucket.grantReadWrite(mailIngestFunction)
         documentsTable.grantReadWriteData(mailIngestFunction)
 
-        faxBucket.grantReadWrite(apiHandlerFunction)
+        faxSystemBucket.grantReadWrite(apiHandlerFunction)
         documentsTable.grantReadData(apiHandlerFunction)
 
         mailSendFunction.addToRolePolicy(
@@ -116,10 +128,11 @@ export class FaxMailCloudStack extends cdk.Stack {
         )
 
         // S3 Event Notifications
-        faxBucket.addEventNotification(
+        // uploads/raw/ にアップロードされた画像ファイルをトリガーにImageOCRFunctionを実行
+        faxSystemBucket.addEventNotification(
             s3.EventType.OBJECT_CREATED,
             new s3n.LambdaDestination(imageOcrFunction),
-            { suffix: '.pdf' }
+            { prefix: 'uploads/raw/' }
         )
 
         // API Gateway
@@ -154,14 +167,9 @@ export class FaxMailCloudStack extends cdk.Stack {
             description: 'API Gateway URL',
         })
 
-        new cdk.CfnOutput(this, 'DocumentsBucketName', {
-            value: documentsBucket.bucketName,
-            description: 'Documents S3 Bucket Name',
-        })
-
-        new cdk.CfnOutput(this, 'FaxBucketName', {
-            value: faxBucket.bucketName,
-            description: 'FAX S3 Bucket Name',
+        new cdk.CfnOutput(this, 'FaxSystemBucketName', {
+            value: faxSystemBucket.bucketName,
+            description: 'FAX System S3 Bucket Name',
         })
 
         new cdk.CfnOutput(this, 'DocumentsTableName', {
