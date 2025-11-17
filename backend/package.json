@@ -23,7 +23,7 @@
         "@aws-sdk/s3-request-presigner": "^3.450.0",
         "mailparser": "^3.6.5",
         "pdfkit": "^0.14.0",
-        "sharp": "^0.33.1",
+        "sharp": "^0.33.5",
         "uuid": "^9.0.1"
     },
     "devDependencies": {

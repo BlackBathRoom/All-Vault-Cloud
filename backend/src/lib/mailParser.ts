@@ -1,6 +1,13 @@
 import { simpleParser, Attachment, AddressObject, ParsedMail } from 'mailparser'
 import { ParsedEmail } from './types'
 import { SESEventRecord } from 'aws-lambda'
+import { getObjectAsBuffer } from './s3Utils'
+
+interface SESReceiptActionS3 {
+    type: 'S3'
+    bucketName: string
+    objectKey: string
+}
 
 /**
  * AddressObject | AddressObject[] | undefined → string に変換
@@ -26,21 +33,17 @@ const addressToTextArray = (
         : [addr.text]
 }
 
-/**
- * SES のイベント（Lambda）からメール情報を抽出（簡易版）
- */
 export const parseEmail = async (
     sesRecord: SESEventRecord
 ): Promise<ParsedEmail> => {
-    const parsed = {
-        from: sesRecord.ses.mail.commonHeaders.from?.[0] || 'unknown',
-        to: sesRecord.ses.mail.commonHeaders.to || [],
-        subject: sesRecord.ses.mail.commonHeaders.subject || 'No Subject',
-        text: 'Email body will be parsed from S3',
-        attachments: [],
-    }
+    // SES → S3 アクション情報を取得
+    const action = sesRecord.ses.receipt.action as SESReceiptActionS3
+    const bucket = action.bucketName
+    const key = action.objectKey
 
-    return parsed
+    // S3からEMLを取得して解析
+    const emlBuffer = await getObjectAsBuffer(bucket, key)
+    return parseEmailFromBuffer(emlBuffer)
 }
 
 /**
