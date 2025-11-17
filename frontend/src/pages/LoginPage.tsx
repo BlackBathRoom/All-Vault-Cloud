@@ -1,6 +1,7 @@
 
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,8 +19,8 @@ export default function LoginPage() {
     // TODO: 認証API連携
     setTimeout(() => {
       setLoading(false);
-      if (email === 'demo@example.com' && password === 'password') {
-        alert('ログイン成功!');
+      if (email === 'test1@test.com' && password === 'test1') {
+        navigate('/');
       } else {
         alert('メールアドレスまたはパスワードが正しくありません');
       }
