@@ -1,11 +1,13 @@
 name: CDK Deploy
 
+# ローカル開発用に一時無効化
+# AWS認証情報設定後に有効化してください
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'infra/**'
-      - 'backend/**'
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'infra/**'
+  #     - 'backend/**'
   workflow_dispatch:
 
 jobs:
