@@ -34,6 +34,8 @@ lerna-debug.log*
 
 # CDK
 infra/cdk.out/
+infra/.cdk.staging/
+infra/cdk.context.json
 *.js
 *.d.ts
 !jest.config.js
