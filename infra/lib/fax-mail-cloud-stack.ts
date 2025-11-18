@@ -12,6 +12,16 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import * as path from 'path'
 
+/**
+ * FAX・メール・クラウドシステムのメインスタック
+ * 
+ * このスタックは以下のAWSリソースを作成します：
+ * - S3: ドキュメントストレージ（prefix構造管理）
+ * - DynamoDB: ドキュメントメタデータテーブル（GSI付き）
+ * - Lambda: 4つの関数（OCR、メール取り込み、API、メール送信）
+ * - API Gateway: RESTful API
+ * - SES: メール受信ルール
+ */
 export class FaxMailCloudStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props)
@@ -216,7 +226,7 @@ export class FaxMailCloudStack extends cdk.Stack {
         })
 
         // SES受信ルール: メールをS3に保存してからLambdaを実行
-        const receiptRule = receiptRuleSet.addRule('FaxMailReceiptRule', {
+        receiptRuleSet.addRule('FaxMailReceiptRule', {
             recipients: [], // 空の場合は全てのメールを受信
             scanEnabled: true, // スパム・ウイルススキャンを有効化
             actions: [
