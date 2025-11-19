@@ -9,6 +9,7 @@ import FaxUploadPage from './pages/FaxUploadPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import NewaccountPage from './pages/NewaccountPage.tsx';
 import { useLocation } from 'react-router-dom';
+import { Footer } from './components/layout/Footer';
 
 function App() {
     return (
@@ -27,9 +28,9 @@ function AppContent() {
             <Route path="/newaccount" element={<NewaccountPage />} />
         </Routes>
     ) : (
-        <div className="app">
-            <div className="app-container">
-                <main className="main-content">
+        <div className="app min-h-screen flex flex-col">
+            <div className="flex-1 app-container flex flex-col">
+                <main className="main-content flex-1">
                     <Routes>
                         <Route path="/" element={<HomePage />} />
                         <Route path="/documents" element={<DocumentsPage />} />
@@ -37,6 +38,7 @@ function AppContent() {
                     </Routes>
                 </main>
             </div>
+            <Footer />
         </div>
     );
 }
