@@ -54,8 +54,9 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
             variant="ghost"
             size="icon"
             onClick={onClose}
+            className="bg-white hover:bg-gray-100"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-black" />
           </Button>
         </div>
 

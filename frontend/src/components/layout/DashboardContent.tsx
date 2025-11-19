@@ -106,11 +106,11 @@ export function DashboardContent({
                 <div
                   className={`${stat.bgColor} p-3 rounded-lg`}
                 >
-                  <Icon className={`w-5 h-5 ${stat.color}`} />
+                  <Icon className={`w-8 h-8 ${stat.color}`} />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-gray-900 mb-2">
+                <div className="text-gray-900 mb-2 text-3xl">
                   {stat.value}
                 </div>
               </CardContent>
