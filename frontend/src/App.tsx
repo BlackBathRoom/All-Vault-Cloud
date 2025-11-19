@@ -28,9 +28,7 @@ function AppContent() {
         </Routes>
     ) : (
         <div className="app">
-            <Header />
             <div className="app-container">
-                <Sidebar />
                 <main className="main-content">
                     <Routes>
                         <Route path="/" element={<HomePage />} />
