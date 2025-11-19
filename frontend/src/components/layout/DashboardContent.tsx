@@ -31,21 +31,21 @@ export function DashboardContent({
   const stats = [
     {
       title: "総文書数",
-      value: "1,248",
+      value: "124",
       icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
       title: "FAX",
-      value: "342",
+      value: "64",
       icon: Printer,
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
       title: "メール",
-      value: "906",
+      value: "60",
       icon: Mail,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
