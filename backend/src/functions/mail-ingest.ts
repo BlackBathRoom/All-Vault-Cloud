@@ -10,7 +10,6 @@ const BUCKET_NAME = process.env.BUCKET_NAME || ''
 const TABLE_NAME = process.env.TABLE_NAME || ''
 
 // backend/src/functions/mail-ingest.ts
-// … import はそのまま
 
 export const handler = async (event: SESEvent) => {
     console.log('MailIngest function triggered', JSON.stringify(event))
