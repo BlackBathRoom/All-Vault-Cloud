@@ -245,3 +245,16 @@ avc-system/
 └── docs/
     └── email/        # メール添付PDF
 ```
+
+---
+
+## ⚙️ Lambda 関数一覧
+
+| 関数名 | トリガー | 役割 |
+|--------|----------|------|
+| `avc-api-documents` | API Gateway | 文書一覧取得 |
+| `avc-api-document-view` | API Gateway | PDF表示用URL発行 |
+| `avc-api-uploads-presign` | API Gateway | アップロード用URL発行 |
+| `avc-api-email-send` | API Gateway | メール送信（SES） |
+| `ImageOCRFunction` | S3 (uploads/raw/) | OCR処理 → PDF変換 |
+| `MailIngestFunction` | S3 (ses-raw-mail/) | メール解析 → DB登録 |
