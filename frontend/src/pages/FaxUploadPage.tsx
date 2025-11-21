@@ -23,24 +23,9 @@ const FaxUploadPage: React.FC = () => {
                 onClose={() => setSidebarOpen(false)}
             />
             {/* メイン */}
-            <main className="flex-1 pt-16">
-                <h1 style={{ marginBottom: '2rem' }}>FAXアップロード</h1>
-                <FaxUploadForm />
-                <div
-                    style={{
-                        marginTop: '2rem',
-                        backgroundColor: '#e7f3ff',
-                        padding: '1rem',
-                        borderRadius: '8px',
-                        maxWidth: '500px',
-                    }}
-                >
-                    <h3 style={{ marginBottom: '0.5rem' }}>ℹ️ 使い方</h3>
-                    <ul style={{ marginLeft: '1.5rem' }}>
-                        <li>PDFファイルを選択してアップロードしてください</li>
-                        <li>アップロード後、自動的にOCR処理が実行されます</li>
-                        <li>処理が完了すると文書一覧に表示されます</li>
-                    </ul>
+            <main className="flex-1 pt-16 px-6">
+                <div className="max-w-2xl mx-auto">
+                    <FaxUploadForm />
                 </div>
             </main>
         </div>
