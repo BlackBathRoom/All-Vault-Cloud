@@ -211,3 +211,20 @@ curl -X POST \
   }'
 ```
 </details>
+
+---
+
+## 🗄️ データベース構造
+
+### DynamoDB: `Documents` テーブル
+
+| 属性 | 型 | 説明 |
+|------|-----|------|
+| **id** | String (PK) | UUID |
+| **type** | String | `fax` / `email_body` / `email_attachment` |
+| **subject** | String | 件名（メールのみ） |
+| **from** | String | 送信者（メールのみ） |
+| **pdfKey** | String | S3上のPDFパス |
+| **textKey** | String | OCR結果/メール本文パス |
+| **parentMailId** | String | 親メールID（添付ファイルのみ） |
+| **createdAt** | String | ISO8601形式のタイムスタンプ |
