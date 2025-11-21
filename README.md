@@ -297,3 +297,9 @@ avc-system/
 - [ ] モバイルアプリ対応
 - [ ] 通知機能（SNS）
 - [ ] 複数ユーザー対応（Cognito）
+
+---
+
+## 📝 ライセンス
+
+MIT License - 詳細は [LICENSE](LICENSE) を参照
