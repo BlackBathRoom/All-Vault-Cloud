@@ -305,17 +305,6 @@ avc-system/
 MIT License - 詳細は [LICENSE](LICENSE) を参照
 
 ---
-
-## 👥 コントリビューター
-
-<a href="https://github.com/BlackBathRoom/All-Vault-Cloud/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=BlackBathRoom/All-Vault-Cloud" />
-</a>
-
----
-
-<div align="center">
-
 **Made with ❤️ by Itsuki**
 
 [⬆ トップに戻る](#-all-vault-cloud)
