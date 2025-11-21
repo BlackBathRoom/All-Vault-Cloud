@@ -40,3 +40,19 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🏗️ システムアーキテクチャ
+
+```mermaid
+graph LR
+    A[フロントエンド<br/>React] -->|API Gateway| B[Lambda関数]
+    B -->|読み書き| C[(DynamoDB<br/>Documents)]
+    B -->|署名付きURL| D[S3 Bucket]
+    D -->|S3トリガー| E[OCR Lambda]
+    E -->|PDF保存| D
+    F[SES] -->|メール受信| D
+    D -->|S3トリガー| G[メール解析 Lambda]
+    G -->|登録| C
+```
