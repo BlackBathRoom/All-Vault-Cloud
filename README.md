@@ -56,3 +56,29 @@ graph LR
     D -->|S3トリガー| G[メール解析 Lambda]
     G -->|登録| C
 ```
+
+---
+
+## 🚀 クイックスタート
+
+### 📋 前提条件
+
+- Node.js 18以上
+- AWS アカウント
+- AWS CLI 設定済み
+
+### 🎯 フロントエンド起動
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/BlackBathRoom/All-Vault-Cloud.git
+cd All-Vault-Cloud/frontend
+
+# 依存関係をインストール
+npm install
+
+# 開発サーバー起動
+npm run dev
+```
+
+ブラウザで `http://localhost:3000` にアクセス 🎉
