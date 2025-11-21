@@ -1,89 +1,281 @@
 import React, { useState } from 'react'
+import { Upload, Camera, FileText, X, Info } from 'lucide-react'
+import { Button } from '../ui/button'
 import { getPresignedUrl } from '../../api/uploadsApi.ts'
 
 const FaxUploadForm: React.FC = () => {
-    const [file, setFile] = useState<File | null>(null)
-    const [uploading, setUploading] = useState(false)
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+    const [isDragging, setIsDragging] = useState(false)
     const [message, setMessage] = useState('')
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0])
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (file && (file.type === 'image/png' || file.type === 'image/jpeg')) {
+            setSelectedFile(file)
+            setMessage('')
+        } else {
+            setMessage('PNG または JPEG ファイルを選択してください')
         }
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        if (!file) {
-            setMessage('ファイルを選択してください')
-            return
+    const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (file) {
+            setSelectedFile(file)
+            setMessage('')
         }
+    }
+
+    const handleDragOver = (event: React.DragEvent) => {
+        event.preventDefault()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = (event: React.DragEvent) => {
+        event.preventDefault()
+        setIsDragging(false)
+    }
+
+    const handleDrop = (event: React.DragEvent) => {
+        event.preventDefault()
+        setIsDragging(false)
+        
+        const files = event.dataTransfer.files
+        if (files.length > 0) {
+            const file = files[0]
+            if (file.type === 'image/png' || file.type === 'image/jpeg') {
+                setSelectedFile(file)
+                setMessage('')
+            } else {
+                setMessage('PNG または JPEG ファイルを選択してください')
+            }
+        }
+    }
+
+    const handleUpload = async () => {
+        if (!selectedFile) return
 
         try {
-            setUploading(true)
+            setUploadStatus('uploading')
             setMessage('')
 
             // 署名付きURL取得
-            const { url } = await getPresignedUrl(file.name, file.type)
+            const { url } = await getPresignedUrl(selectedFile.name, selectedFile.type)
 
             // S3にアップロード
             const response = await fetch(url, {
                 method: 'PUT',
-                body: file,
+                body: selectedFile,
                 headers: {
-                    'Content-Type': file.type,
+                    'Content-Type': selectedFile.type,
                 },
             })
 
             if (response.ok) {
+                setUploadStatus('success')
                 setMessage('アップロード成功！')
-                setFile(null)
+                setTimeout(() => {
+                    setSelectedFile(null)
+                    setUploadStatus('idle')
+                    setMessage('')
+                }, 2000)
             } else {
+                setUploadStatus('error')
                 setMessage('アップロード失敗')
             }
         } catch (error) {
             console.error('Upload error:', error)
+            setUploadStatus('error')
             setMessage('エラーが発生しました')
-        } finally {
-            setUploading(false)
         }
     }
 
-    return (
-        <form
-            onSubmit={handleSubmit}
-            style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '2rem',
-                maxWidth: '500px',
-            }}
-        >
-            <h2 style={{ marginBottom: '1.5rem' }}>FAXアップロード</h2>
+    const removeFile = () => {
+        setSelectedFile(null)
+        setUploadStatus('idle')
+        setMessage('')
+    }
 
-            <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>ファイル (PDF):</label>
-                <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handleFileChange}
-                    disabled={uploading}
-                />
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes'
+        const k = 1024
+        const sizes = ['Bytes', 'KB', 'MB', 'GB']
+        const i = Math.floor(Math.log(bytes) / Math.log(k))
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* ヘッダー */}
+            <div className="text-center">
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+                    FAXアップロード
+                </h1>
+                <p className="text-slate-600">
+                    PNG・JPEGファイルをアップロードするか、カメラで直接撮影してください
+                </p>
             </div>
 
-            <button type="submit" disabled={uploading || !file}>
-                {uploading ? 'アップロード中...' : 'アップロード'}
-            </button>
-
-            {message && (
+            {/* メインカード */}
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 space-y-6">
+                {/* ドラッグ&ドロップエリア */}
                 <div
-                    style={{ marginTop: '1rem', color: message.includes('成功') ? 'green' : 'red' }}
+                    className={`border-2 border-dashed rounded-lg p-8 md:p-12 text-center transition-colors ${
+                        isDragging
+                            ? 'border-blue-400 bg-blue-50'
+                            : selectedFile
+                            ? 'border-gray-300 bg-white'
+                            : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                 >
-                    {message}
+                    {selectedFile ? (
+                        /* 選択されたファイルの表示 */
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                                <FileText className="size-12 text-blue-600" />
+                                <div className="text-left">
+                                    <p className="text-sm text-slate-500 mb-1">
+                                        ファイル (画像)
+                                    </p>
+                                    <p className="font-medium text-slate-900 mb-1">
+                                        {selectedFile.name}
+                                    </p>
+                                    <p className="text-sm text-slate-500">
+                                        {formatFileSize(selectedFile.size)}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={removeFile}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-900 border-slate-300 px-4 py-2"
+                            >
+                                削除
+                            </Button>
+                        </div>
+                    ) : (
+                        /* 通常のドラッグ&ドロップ表示 */
+                        <>
+                            <Upload className="size-12 text-gray-400 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-slate-900 mb-2">
+                                ファイルをドラッグ&ドロップ
+                            </h3>
+                            <p className="text-slate-500">
+                                または下のボタンから選択してください
+                            </p>
+                        </>
+                    )}
                 </div>
-            )}
-        </form>
+
+                {/* ファイル選択・カメラボタン - ファイルが選択されていない場合のみ表示 */}
+                {!selectedFile && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* ファイル選択カード */}
+                        <div className="border border-slate-300 rounded-lg p-6 hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer">
+                            <div className="text-center">
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg"
+                                        onChange={handleFileSelect}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        id="file-upload"
+                                    />
+                                    <div className="flex flex-col items-center space-y-3">
+                                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <Upload className="size-8 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-medium text-slate-900">
+                                                ファイルを選択
+                                            </h3>
+                                            <p className="text-sm text-slate-500 mt-1">
+                                                PNG・JPEGファイルのみ対応
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* カメラ撮影カード */}
+                        <div className="border border-slate-300 rounded-lg p-6 hover:border-green-500 hover:bg-green-50 transition-colors cursor-pointer">
+                            <div className="text-center">
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={handleCameraCapture}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        id="camera-capture"
+                                    />
+                                    <div className="flex flex-col items-center space-y-3">
+                                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                                            <Camera className="size-8 text-green-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-medium text-slate-900">
+                                                カメラで撮影
+                                            </h3>
+                                            <p className="text-sm text-slate-500 mt-1">
+                                                写真を直接撮影
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* アップロードボタン */}
+                <div>
+                    <Button
+                        onClick={handleUpload}
+                        disabled={!selectedFile || uploadStatus === 'uploading'}
+                        className="w-full bg-slate-600 hover:bg-slate-700 text-white disabled:bg-slate-400"
+                    >
+                        <Upload className="size-4 mr-2" />
+                        {uploadStatus === 'uploading' ? 'アップロード中...' : 'アップロード'}
+                    </Button>
+
+                    {/* メッセージ表示 */}
+                    {message && (
+                        <div className={`mt-3 p-3 rounded-lg text-sm ${
+                            uploadStatus === 'success' 
+                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                : uploadStatus === 'error'
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : 'bg-slate-50 text-slate-700 border border-slate-200'
+                        }`}>
+                            {message}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 使い方 */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-start space-x-3">
+                    <Info className="size-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                        <h3 className="font-medium text-blue-900 mb-2">使い方</h3>
+                        <ul className="text-sm text-blue-800 space-y-1">
+                            <li>• PNG または JPEG ファイルを選択してアップロードしてください</li>
+                            <li>• アップロード後、自動的にOCR処理が実行されます</li>
+                            <li>• 処理が完了すると文書一覧に表示されます</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
     )
 }
 
