@@ -142,3 +142,35 @@ curl https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents?type=
 curl https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents/b7815804-8d5a-41e9-8eb4-cc914d0618cb/view
 ```
 </details>
+
+### 📤 アップロード
+
+<details>
+<summary><b>GET</b> <code>/uploads/presigned-url</code> - 署名付きURL発行</summary>
+
+#### レスポンス例
+```json
+{
+  "uploadUrl": "https://avc-system.s3.amazonaws.com/uploads/raw/xxxx.jpg?...",
+  "objectKey": "uploads/raw/xxxx.jpg"
+}
+```
+
+#### フロントエンド実装例（React）
+```typescript
+// 1. 署名付きURLを取得
+const response = await fetch(
+  "https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/uploads/presigned-url"
+);
+const { uploadUrl, objectKey } = await response.json();
+
+// 2. PUTでファイルをアップロード
+await fetch(uploadUrl, {
+  method: "PUT",
+  headers: { "Content-Type": "image/jpeg" },
+  body: file, // File オブジェクト
+});
+
+console.log("✅ アップロード完了:", objectKey);
+```
+</details>
