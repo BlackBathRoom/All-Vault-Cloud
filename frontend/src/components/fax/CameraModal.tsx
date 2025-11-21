@@ -115,7 +115,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
                         variant="ghost"
                         size="sm"
                         onClick={onClose}
-                        className="hover:bg-gray-100"
+                        className="bg-red-500 hover:bg-red-600 text-white"
                     >
                         <X className="size-5" />
                     </Button>
@@ -164,18 +164,18 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
                     </div>
 
                     {/* コントロールボタン */}
-                    <div className="flex justify-center space-x-3 md:space-x-4 mt-3 md:mt-4">
+                    <div className="flex justify-center space-x-3 md:space-x-4 mt-3 md:mt-4 ">
                         <Button
                             variant="outline"
                             onClick={onClose}
-                            className="px-4 md:px-6 text-sm md:text-base"
+                            className="px-4 md:px-6 text-sm md:text-base bg-slate-500/80 hover:bg-slate-600/80 text-white border-slate-500"
                         >
                             キャンセル
                         </Button>
                         <Button
                             onClick={capturePhoto}
                             disabled={isLoading || !!error}
-                            className="px-4 md:px-6 text-sm md:text-base bg-blue-600 hover:bg-blue-700 text-white"
+                            className="px-4 md:px-6 text-sm md:text-base bg-pink-500 hover:bg-pink-600 text-white disabled:bg-pink-300"
                         >
                             <Camera className="size-4 mr-2" />
                             撮影
