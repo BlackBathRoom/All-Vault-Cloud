@@ -9,6 +9,8 @@ import { v4 as uuidv4 } from 'uuid'
 const BUCKET_NAME = process.env.BUCKET_NAME || ''
 const TABLE_NAME = process.env.TABLE_NAME || ''
 
+// backend/src/functions/mail-ingest.ts
+
 export const handler = async (event: SESEvent) => {
     console.log('MailIngest function triggered', JSON.stringify(event))
 
@@ -20,11 +22,10 @@ export const handler = async (event: SESEvent) => {
             const subject = sesRecord.mail.commonHeaders.subject || 'No Subject'
             const date = sesRecord.mail.commonHeaders.date || new Date().toISOString()
 
-            // メール本文を取得（S3から）
-            // SESはメールをS3に保存する設定を前提
+            // 🔸 メール本文 + 添付情報を取得（S3 から EML を読んで解析）
             const emailContent = await parseEmail(record)
 
-            // 添付ファイルを保存
+            // 添付ファイルを保存（ここは今のままでOK）
             if (emailContent.attachments && emailContent.attachments.length > 0) {
                 for (const attachment of emailContent.attachments) {
                     const s3Key = `emails/${messageId}/${attachment.filename}`
@@ -42,23 +43,25 @@ export const handler = async (event: SESEvent) => {
 
             // DynamoDBに保存
             const documentId = uuidv4()
+            const now = new Date().toISOString()
 
             const putCommand = new PutCommand({
                 TableName: TABLE_NAME,
                 Item: {
                     id: documentId,
                     type: 'email',
-                    subject: subject,
+                    subject,
                     sender: from,
                     receivedAt: new Date(date).toISOString(),
                     s3Key: `emails/${messageId}/`,
+                    extractedText: emailContent.text, // ★ メール本文を保存
                     metadata: {
                         messageId,
                         to: sesRecord.mail.commonHeaders.to,
                         cc: sesRecord.mail.commonHeaders.cc,
                     },
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
+                    createdAt: now,
+                    updatedAt: now,
                 },
             })
 

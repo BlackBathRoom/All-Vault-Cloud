@@ -28,6 +28,10 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@types/mailparser": "^3.4.6",
         "prettier": "^3.1.0"
+    },
+    "dependencies": {
+        "pdfkit": "^0.17.2"
     }
 }

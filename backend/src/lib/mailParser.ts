@@ -1,32 +1,65 @@
-import { simpleParser, Attachment } from 'mailparser'
+import { simpleParser, Attachment, AddressObject, ParsedMail } from 'mailparser'
 import { ParsedEmail } from './types'
 import { SESEventRecord } from 'aws-lambda'
+import { getObjectAsBuffer } from './s3Utils'
 
-export const parseEmail = async (sesRecord: SESEventRecord): Promise<ParsedEmail> => {
-    // SESイベントからメール内容を取得
-    // 実際の実装では、S3からEMLファイルを取得して解析
-
-    // 簡易実装例
-    const parsed = {
-        from: sesRecord.ses.mail.commonHeaders.from?.[0] || 'unknown',
-        to: sesRecord.ses.mail.commonHeaders.to || [],
-        subject: sesRecord.ses.mail.commonHeaders.subject || 'No Subject',
-        text: 'Email body will be parsed from S3',
-        attachments: [],
-    }
-
-    return parsed
+interface SESReceiptActionS3 {
+    type: 'S3'
+    bucketName: string
+    objectKey: string
 }
 
-export const parseEmailFromBuffer = async (buffer: Buffer): Promise<ParsedEmail> => {
-    const parsed = await simpleParser(buffer)
+/**
+ * AddressObject | AddressObject[] | undefined → string に変換
+ */
+const addressToText = (
+    addr?: AddressObject | AddressObject[]
+): string => {
+    if (!addr) return ''
+    return Array.isArray(addr)
+        ? addr.map(a => a.text).join(', ')
+        : addr.text
+}
+
+/**
+ * AddressObject | AddressObject[] | undefined → string[] に変換
+ */
+const addressToTextArray = (
+    addr?: AddressObject | AddressObject[]
+): string[] => {
+    if (!addr) return []
+    return Array.isArray(addr)
+        ? addr.map(a => a.text)
+        : [addr.text]
+}
+
+export const parseEmail = async (
+    sesRecord: SESEventRecord
+): Promise<ParsedEmail> => {
+    // SES → S3 アクション情報を取得
+    const action = sesRecord.ses.receipt.action as SESReceiptActionS3
+    const bucket = action.bucketName
+    const key = action.objectKey
+
+    // S3からEMLを取得して解析
+    const emlBuffer = await getObjectAsBuffer(bucket, key)
+    return parseEmailFromBuffer(emlBuffer)
+}
+
+/**
+ * S3 から取得した EML バッファを mailparser で解析
+ */
+export const parseEmailFromBuffer = async (
+    buffer: Buffer
+): Promise<ParsedEmail> => {
+    const parsed: ParsedMail = await simpleParser(buffer)
 
     return {
-        from: parsed.from?.text || '',
-        to: parsed.to?.text ? [parsed.to.text] : [],
+        from: addressToText(parsed.from),
+        to: addressToTextArray(parsed.to),
         subject: parsed.subject || '',
         text: parsed.text || '',
-        html: parsed.html as string | undefined,
+        html: typeof parsed.html === 'string' ? parsed.html : undefined,
         attachments: parsed.attachments.map((att: Attachment) => ({
             filename: att.filename || 'unknown',
             contentType: att.contentType,
