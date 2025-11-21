@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Upload, Camera, FileText, X, Info } from 'lucide-react'
+import { Upload, Camera, FileText, Info } from 'lucide-react'
 import { Button } from '../ui/button'
 import { getPresignedUrl } from '../../api/uploadsApi.ts'
 import CameraModal from './CameraModal'
