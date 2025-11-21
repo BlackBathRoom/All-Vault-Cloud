@@ -228,3 +228,20 @@ curl -X POST \
 | **textKey** | String | OCR結果/メール本文パス |
 | **parentMailId** | String | 親メールID（添付ファイルのみ） |
 | **createdAt** | String | ISO8601形式のタイムスタンプ |
+
+---
+
+## 📁 S3 バケット構造
+
+```
+avc-system/
+├── uploads/
+│   ├── raw/          # FAX画像（アップロード先）
+│   ├── text/         # OCRテキスト
+│   └── pdf/          # 変換後PDF
+├── ses-raw-mail/     # 受信メール（EML形式）
+├── emails/
+│   └── text/         # メール本文
+└── docs/
+    └── email/        # メール添付PDF
+```
