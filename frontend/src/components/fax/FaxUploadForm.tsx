@@ -130,16 +130,17 @@ const FaxUploadForm: React.FC = () => {
                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
                     FAXアップロード
                 </h1>
-                <p className="text-slate-600">
-                    PNG・JPEGファイルをアップロードするか、カメラで直接撮影してください
+                <p className="text-slate-600 text-sm md:text-base px-4 md:px-0">
+                    <span className="hidden md:inline">PNG・JPEGファイルをアップロードするか、カメラで直接撮影してください</span>
+                    <span className="md:hidden">ファイルを選択するか、カメラで撮影してください</span>
                 </p>
             </div>
 
             {/* メインカード */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 space-y-6">
-                {/* ドラッグ&ドロップエリア */}
+                {/* ドラッグ&ドロップエリア - デスクトップのみ表示 */}
                 <div
-                    className={`border-2 border-dashed rounded-lg p-8 md:p-12 text-center transition-colors ${
+                    className={`hidden md:block border-2 border-dashed rounded-lg p-8 md:p-12 text-center transition-colors ${
                         isDragging
                             ? 'border-blue-400 bg-blue-50'
                             : selectedFile
@@ -151,7 +152,7 @@ const FaxUploadForm: React.FC = () => {
                     onDrop={handleDrop}
                 >
                     {selectedFile ? (
-                        /* 選択されたファイルの表示 */
+                        /* デスクトップ用：選択されたファイルの表示 */
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
                                 <FileText className="size-12 text-blue-600" />
@@ -190,6 +191,37 @@ const FaxUploadForm: React.FC = () => {
                         </>
                     )}
                 </div>
+
+                {/* モバイル用：選択されたファイル表示エリア */}
+                {selectedFile && (
+                    <div className="md:hidden bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                <FileText className="size-10 text-blue-600 flex-shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs text-slate-500 mb-1">
+                                        選択されたファイル
+                                    </p>
+                                    <p className="font-medium text-slate-900 mb-1 truncate">
+                                        {selectedFile.name}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        {formatFileSize(selectedFile.size)}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={removeFile}
+                                className="bg-slate-50 hover:bg-slate-100 text-slate-900 border-slate-300 px-3 py-2 ml-2"
+                            >
+                                削除
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* ファイル選択・カメラボタン - ファイルが選択されていない場合のみ表示 */}
                 {!selectedFile && (

@@ -103,10 +103,10 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-2 md:p-4">
+            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[95vh] md:max-h-[90vh] overflow-hidden">
                 {/* ヘッダー */}
-                <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center justify-between p-3 md:p-4 border-b">
                     <h2 className="text-lg font-semibold flex items-center">
                         <Camera className="size-5 mr-2" />
                         カメラで撮影
@@ -122,7 +122,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
                 </div>
 
                 {/* カメラビュー */}
-                <div className="p-4">
+                <div className="p-3 md:p-4">
                     <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
                         {isLoading && (
                             <div className="absolute inset-0 flex items-center justify-center text-white">
@@ -150,13 +150,13 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
                             style={{ display: isLoading || error ? 'none' : 'block' }}
                         />
 
-                        {/* カメラ切り替えボタン（モバイルのみ） */}
+                        {/* カメラ切り替えボタン（スマートフォンのみ） */}
                         {!isLoading && !error && (
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={switchCamera}
-                                className="absolute top-2 right-2 bg-black bg-opacity-50 text-white hover:bg-opacity-70 md:hidden"
+                                className="absolute top-2 right-2 bg-black bg-opacity-50 text-white hover:bg-opacity-70 sm:hidden"
                             >
                                 <RotateCcw className="size-4" />
                             </Button>
@@ -164,18 +164,18 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
                     </div>
 
                     {/* コントロールボタン */}
-                    <div className="flex justify-center space-x-4 mt-4">
+                    <div className="flex justify-center space-x-3 md:space-x-4 mt-3 md:mt-4">
                         <Button
                             variant="outline"
                             onClick={onClose}
-                            className="px-6"
+                            className="px-4 md:px-6 text-sm md:text-base"
                         >
                             キャンセル
                         </Button>
                         <Button
                             onClick={capturePhoto}
                             disabled={isLoading || !!error}
-                            className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
+                            className="px-4 md:px-6 text-sm md:text-base bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             <Camera className="size-4 mr-2" />
                             撮影
