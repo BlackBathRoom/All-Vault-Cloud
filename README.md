@@ -121,3 +121,24 @@ curl https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents
 curl https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents?type=fax
 ```
 </details>
+
+<details>
+<summary><b>GET</b> <code>/documents/{id}/view</code> - PDF閲覧用URL取得</summary>
+
+#### パスパラメータ
+| パラメータ | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string | 文書ID（UUID） |
+
+#### レスポンス例
+```json
+{
+  "url": "https://avc-system.s3.amazonaws.com/uploads/pdf/xxx.pdf?X-Amz-Algorithm=..."
+}
+```
+
+#### 使用例
+```bash
+curl https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents/b7815804-8d5a-41e9-8eb4-cc914d0618cb/view
+```
+</details>
