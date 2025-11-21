@@ -258,3 +258,32 @@ avc-system/
 | `avc-api-email-send` | API Gateway | メール送信（SES） |
 | `ImageOCRFunction` | S3 (uploads/raw/) | OCR処理 → PDF変換 |
 | `MailIngestFunction` | S3 (ses-raw-mail/) | メール解析 → DB登録 |
+
+---
+
+## 🛠️ 技術スタック
+
+<table>
+<tr>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=react" width="48" height="48" alt="React" />
+<br>React
+</td>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=typescript" width="48" height="48" alt="TypeScript" />
+<br>TypeScript
+</td>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=aws" width="48" height="48" alt="AWS" />
+<br>AWS
+</td>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=dynamodb" width="48" height="48" alt="DynamoDB" />
+<br>DynamoDB
+</td>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=nodejs" width="48" height="48" alt="Node.js" />
+<br>Node.js
+</td>
+</tr>
+</table>
