@@ -174,3 +174,40 @@ await fetch(uploadUrl, {
 console.log("✅ アップロード完了:", objectKey);
 ```
 </details>
+
+### 📧 メール送信
+
+<details>
+<summary><b>POST</b> <code>/emails/send</code> - メール送信（返信）</summary>
+
+#### リクエストボディ
+```json
+{
+  "to": "recipient@example.com",
+  "subject": "件名",
+  "body": "本文テキスト",
+  "documentId": "b7815804-8d5a-41e9-8eb4-cc914d0618cb" // オプション
+}
+```
+
+#### レスポンス例
+```json
+{
+  "status": "success",
+  "messageId": "01020189463e5b-..."
+}
+```
+
+#### 使用例
+```bash
+curl -X POST \
+  https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/emails/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "example@example.com",
+    "subject": "資料のご案内",
+    "body": "以下より資料をご確認いただけます。",
+    "documentId": "b7815804-8d5a-41e9-8eb4-cc914d0618cb"
+  }'
+```
+</details>
