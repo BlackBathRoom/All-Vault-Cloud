@@ -82,3 +82,42 @@ npm run dev
 ```
 
 ブラウザで `http://localhost:3000` にアクセス 🎉
+
+---
+
+## 🌐 API エンドポイント
+
+**ベースURL**: `https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com`
+
+### 📚 文書管理
+
+<details open>
+<summary><b>GET</b> <code>/documents</code> - 文書一覧取得</summary>
+
+#### クエリパラメータ
+| パラメータ | 型 | 説明 | 例 |
+|-----------|-----|------|-----|
+| `type` | string | 文書タイプ（省略可） | `fax`, `email_body`, `email_attachment` |
+
+#### レスポンス例
+```json
+[
+  {
+    "id": "b7815804-8d5a-41e9-8eb4-cc914d0618cb",
+    "type": "fax",
+    "subject": null,
+    "from": null,
+    "createdAt": "2025-11-19T07:11:41.887Z"
+  }
+]
+```
+
+#### 使用例
+```bash
+# すべての文書
+curl https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents
+
+# FAXのみ
+curl https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents?type=fax
+```
+</details>
