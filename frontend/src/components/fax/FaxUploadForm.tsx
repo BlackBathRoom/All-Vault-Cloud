@@ -2,12 +2,14 @@ import React, { useState } from 'react'
 import { Upload, Camera, FileText, X, Info } from 'lucide-react'
 import { Button } from '../ui/button'
 import { getPresignedUrl } from '../../api/uploadsApi.ts'
+import CameraModal from './CameraModal'
 
 const FaxUploadForm: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
     const [isDragging, setIsDragging] = useState(false)
     const [message, setMessage] = useState('')
+    const [isCameraModalOpen, setIsCameraModalOpen] = useState(false)
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -25,6 +27,22 @@ const FaxUploadForm: React.FC = () => {
             setSelectedFile(file)
             setMessage('')
         }
+    }
+
+    const handleCameraClick = () => {
+        // WebRTC対応チェック
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+            setIsCameraModalOpen(true)
+        } else {
+            // フォールバック：ファイル選択
+            const fileInput = document.getElementById('camera-capture') as HTMLInputElement
+            fileInput?.click()
+        }
+    }
+
+    const handleCameraModalCapture = (file: File) => {
+        setSelectedFile(file)
+        setMessage('')
     }
 
     const handleDragOver = (event: React.DragEvent) => {
@@ -205,33 +223,36 @@ const FaxUploadForm: React.FC = () => {
                         </div>
 
                         {/* カメラ撮影カード */}
-                        <div className="border border-slate-300 rounded-lg p-6 hover:border-green-500 hover:bg-green-50 transition-colors cursor-pointer">
+                        <div 
+                            className="border border-slate-300 rounded-lg p-6 hover:border-green-500 hover:bg-green-50 transition-colors cursor-pointer"
+                            onClick={handleCameraClick}
+                        >
                             <div className="text-center">
-                                <div className="relative">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        capture="environment"
-                                        onChange={handleCameraCapture}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        id="camera-capture"
-                                    />
-                                    <div className="flex flex-col items-center space-y-3">
-                                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                                            <Camera className="size-8 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-medium text-slate-900">
-                                                カメラで撮影
-                                            </h3>
-                                            <p className="text-sm text-slate-500 mt-1">
-                                                写真を直接撮影
-                                            </p>
-                                        </div>
+                                <div className="flex flex-col items-center space-y-3">
+                                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                                        <Camera className="size-8 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-medium text-slate-900">
+                                            カメラで撮影
+                                        </h3>
+                                        <p className="text-sm text-slate-500 mt-1">
+                                            写真を直接撮影
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* フォールバック用のhiddenファイル入力 */}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleCameraCapture}
+                            className="hidden"
+                            id="camera-capture"
+                        />
                     </div>
                 )}
 
@@ -275,6 +296,13 @@ const FaxUploadForm: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* カメラモーダル */}
+            <CameraModal
+                isOpen={isCameraModalOpen}
+                onClose={() => setIsCameraModalOpen(false)}
+                onCapture={handleCameraModalCapture}
+            />
         </div>
     )
 }
