@@ -25,38 +25,19 @@ export const handler = async (
     event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
     console.log('ApiHandler invoked:', JSON.stringify(event))
+    console.log('Environment variables:', {
+        TABLE_NAME,
+        BUCKET_NAME,
+        AWS_REGION: process.env.AWS_REGION
+    })
 
     const { httpMethod: method, path } = event
 
     try {
         // -----------------------
-        // GET /documents (一覧)
+        // GET /documents/{id} (詳細 - 先にチェック)
         // -----------------------
-        if (method === 'GET' && path === '/documents') {
-            const type = event.queryStringParameters?.type
-
-            const scanCommand = new ScanCommand({
-                TableName: TABLE_NAME,
-                FilterExpression: type ? '#type = :type' : undefined,
-                ExpressionAttributeNames: type ? { '#type': 'type' } : undefined,
-                ExpressionAttributeValues: type ? { ':type': type } : undefined,
-            })
-
-            const result = await dynamoClient.send(scanCommand)
-
-            const items = (result.Items ?? []).filter(isDocument)
-
-            return {
-                statusCode: 200,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(items),
-            }
-        }
-
-        // -----------------------
-        // GET /documents/{id}
-        // -----------------------
-        if (method === 'GET' && path.startsWith('/documents/')) {
+        if (method === 'GET' && path.startsWith('/documents/') && path !== '/documents') {
             const id = path.split('/')[2]
 
             if (!id) {
@@ -99,8 +80,42 @@ export const handler = async (
 
             return {
                 statusCode: 200,
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
                 body: JSON.stringify({ ...item, pdfUrl }),
+            }
+        }
+
+        // -----------------------
+        // GET /documents (一覧)
+        // -----------------------
+        if (method === 'GET' && path === '/documents') {
+            const type = event.queryStringParameters?.type
+
+            const scanCommand = new ScanCommand({
+                TableName: TABLE_NAME,
+                FilterExpression: type ? '#type = :type' : undefined,
+                ExpressionAttributeNames: type ? { '#type': 'type' } : undefined,
+                ExpressionAttributeValues: type ? { ':type': type } : undefined,
+            })
+
+            const result = await dynamoClient.send(scanCommand)
+
+            const items = (result.Items ?? []).filter(isDocument)
+
+            return {
+                statusCode: 200,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
+                body: JSON.stringify(items),
             }
         }
 
