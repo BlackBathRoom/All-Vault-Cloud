@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3001'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com'
 
 export const apiClient = {
     async get(endpoint: string) {
