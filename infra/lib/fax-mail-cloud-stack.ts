@@ -35,7 +35,7 @@ export class FaxMailCloudStack extends cdk.Stack {
         // - emails/text/     : メール本文テキスト保存先
         // - docs/email/      : メール添付PDF保存先
         const faxSystemBucket = new s3.Bucket(this, 'FaxSystemBucket', {
-            bucketName: `fax-system-${this.account}`,
+            bucketName: 'avc-system',
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             autoDeleteObjects: true,
             cors: [
@@ -53,7 +53,7 @@ export class FaxMailCloudStack extends cdk.Stack {
 
         // DynamoDB Table
         const documentsTable = new dynamodb.Table(this, 'DocumentsTable', {
-            tableName: 'Documents',
+            tableName: 'avc-Documents',
             partitionKey: {
                 name: 'id',
                 type: dynamodb.AttributeType.STRING,

@@ -25,6 +25,11 @@ export const handler = async (
     event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
     console.log('ApiHandler invoked:', JSON.stringify(event))
+    console.log('Environment variables:', {
+        TABLE_NAME,
+        BUCKET_NAME,
+        AWS_REGION: process.env.AWS_REGION
+    })
 
     const { httpMethod: method, path } = event
 
@@ -48,7 +53,12 @@ export const handler = async (
 
             return {
                 statusCode: 200,
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
                 body: JSON.stringify(items),
             }
         }
