@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API テスト - All-Vault-Cloud</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .api-url {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .test-section h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .status.success {
+            color: #4caf50;
+        }
+        
+        .status.error {
+            color: #f44336;
+        }
+        
+        .status.loading {
+            color: #ff9800;
+        }
+        
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-card .label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 All-Vault-Cloud API テスト</h1>
+        <div class="api-url">
+            <strong>API Base URL:</strong> https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com
+        </div>
+
+        <!-- Test 1: 全ドキュメント取得 -->
+        <div class="test-section">
+            <h2>📝 Test 1: 全ドキュメント取得</h2>
+            <button class="btn" onclick="testGetAllDocuments()">
+                GET /documents を実行
+            </button>
+            <div id="result1" class="result" style="display:none;">
+                <div class="status loading">
+                    <span class="loading"></span> 読み込み中...
+                </div>
+            </div>
+        </div>
+
+        <!-- Test 2: FAXドキュメント -->
+        <div class="test-section">
+            <h2>📠 Test 2: FAXドキュメント取得</h2>
+            <button class="btn" onclick="testGetFaxDocuments()">
+                GET /documents?type=fax を実行
+            </button>
+            <div id="result2" class="result" style="display:none;">
+                <div class="status loading">
+                    <span class="loading"></span> 読み込み中...
+                </div>
+            </div>
+        </div>
+
+        <!-- Test 3: メールドキュメント -->
+        <div class="test-section">
+            <h2>📧 Test 3: メールドキュメント取得</h2>
+            <button class="btn" onclick="testGetEmailDocuments()">
+                GET /documents?type=email_body を実行
+            </button>
+            <div id="result3" class="result" style="display:none;">
+                <div class="status loading">
+                    <span class="loading"></span> 読み込み中...
+                </div>
+            </div>
+        </div>
+
+        <!-- 統計情報 -->
+        <div class="test-section">
+            <h2>📊 統計情報</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="number" id="totalCount">-</div>
+                    <div class="label">全ドキュメント数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="faxCount">-</div>
+                    <div class="label">FAX数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="emailCount">-</div>
+                    <div class="label">メール数</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com';
+
+        async function makeRequest(endpoint, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="status loading"><span class="loading"></span> 読み込み中...</div>';
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                const endTime = performance.now();
+                const duration = (endTime - startTime).toFixed(2);
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ 成功 (${response.status})</div>
+                        <div style="color: #666; font-size: 0.9em; margin-bottom: 10px;">
+                            ⏱️ レスポンス時間: ${duration}ms | 
+                            📦 取得件数: ${Array.isArray(data) ? data.length : 1}件
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    return data;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">❌ エラー (${response.status})</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    return null;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">❌ ネットワークエラー</div>
+                    <pre>${error.message}</pre>
+                `;
+                return null;
+            }
+        }
+
+        async function testGetAllDocuments() {
+            const data = await makeRequest('/documents', 'result1');
+            if (data && Array.isArray(data)) {
+                document.getElementById('totalCount').textContent = data.length;
+            }
+        }
+
+        async function testGetFaxDocuments() {
+            const data = await makeRequest('/documents?type=fax', 'result2');
+            if (data && Array.isArray(data)) {
+                document.getElementById('faxCount').textContent = data.length;
+            }
+        }
+
+        async function testGetEmailDocuments() {
+            const data = await makeRequest('/documents?type=email_body', 'result3');
+            if (data && Array.isArray(data)) {
+                document.getElementById('emailCount').textContent = data.length;
+            }
+        }
+
+        // ページロード時に自動で全ドキュメントを取得
+        window.addEventListener('load', () => {
+            console.log('API Test Page Loaded');
+            console.log('Click the buttons to test the API endpoints');
+        });
+    </script>
+</body>
+</html>
