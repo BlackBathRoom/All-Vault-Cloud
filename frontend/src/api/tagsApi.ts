@@ -7,6 +7,17 @@ export interface UpdateTagsRequest {
     category?: string
 }
 
+interface ClassificationResponse {
+    document: Document
+    classification: {
+        tags: string[]
+        category: string
+        confidence: number
+        reasoning?: string
+        message: string
+    }
+}
+
 /**
  * ドキュメントのタグを更新
  */
@@ -15,6 +26,13 @@ export async function updateDocumentTags(
     data: UpdateTagsRequest
 ): Promise<Document> {
     return apiClient.patch(`/documents/${documentId}/tags`, data)
+}
+
+/**
+ * AIでドキュメントを自動分類
+ */
+export async function classifyDocument(documentId: string): Promise<ClassificationResponse> {
+    return apiClient.post(`/documents/${documentId}/classify`, {})
 }
 
 /**
