@@ -18,129 +18,36 @@ import {
   TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
-
-interface Document {
-  id: string;
-  type: "fax" | "email" | "document";
-  subject: string;
-  sender: string;
-  receivedDate: string;
-}
-
-// サンプルデータ
-const sampleDocuments: Document[] = [
-  {
-    id: "1",
-    type: "fax",
-    subject: "見積書_2024年11月",
-    sender: "田中商事",
-    receivedDate: "2025-11-19 14:30",
-  },
-  {
-    id: "2",
-    type: "email",
-    subject: "契約書類のご確認",
-    sender: "佐藤太郎",
-    receivedDate: "2025-11-19 11:15",
-  },
-  {
-    id: "3",
-    type: "fax",
-    subject: "発注書_202511-001",
-    sender: "鈴木産業",
-    receivedDate: "2025-11-18 16:45",
-  },
-  {
-    id: "4",
-    type: "document",
-    subject: "月次報告書_10月分",
-    sender: "山田花子",
-    receivedDate: "2025-11-18 09:20",
-  },
-  {
-    id: "5",
-    type: "email",
-    subject: "会議資料の共有",
-    sender: "高橋一郎",
-    receivedDate: "2025-11-17 13:00",
-  },
-  {
-    id: "6",
-    type: "fax",
-    subject: "請求書_202511-015",
-    sender: "ABC株式会社",
-    receivedDate: "2025-11-16 10:30",
-  },
-  {
-    id: "7",
-    type: "document",
-    subject: "プロジェクト提案書",
-    sender: "中村美咲",
-    receivedDate: "2025-11-16 08:45",
-  },
-  {
-    id: "8",
-    type: "email",
-    subject: "システム保守のお知らせ",
-    sender: "システム管理者",
-    receivedDate: "2025-11-15 17:20",
-  },
-  {
-    id: "9",
-    type: "fax",
-    subject: "納期変更のご連絡",
-    sender: "製造業者XYZ",
-    receivedDate: "2025-11-15 14:15",
-  },
-  {
-    id: "10",
-    type: "document",
-    subject: "年次監査報告書",
-    sender: "監査法人DEF",
-    receivedDate: "2025-11-14 16:00",
-  },
-  {
-    id: "11",
-    type: "email",
-    subject: "新商品カタログについて",
-    sender: "営業部",
-    receivedDate: "2025-11-14 12:30",
-  },
-  {
-    id: "12",
-    type: "fax",
-    subject: "在庫確認依頼書",
-    sender: "倉庫管理センター",
-    receivedDate: "2025-11-13 15:45",
-  },
-  {
-    id: "13",
-    type: "document",
-    subject: "技術仕様書_Ver2.1",
-    sender: "開発チーム",
-    receivedDate: "2025-11-13 11:20",
-  },
-  {
-    id: "14",
-    type: "email",
-    subject: "研修会のご案内",
-    sender: "人事部",
-    receivedDate: "2025-11-12 09:15",
-  },
-  {
-    id: "15",
-    type: "fax",
-    subject: "配送スケジュール表",
-    sender: "物流センター",
-    receivedDate: "2025-11-12 07:50",
-  },
-];
+import { getDocuments } from "../../api/documentsApi";
+import { Document } from "../../types/document";
 
 export function DocumentList() {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(false);
+
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8; // 1ページあたりの表示件数
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        console.log('📡 API読み込み開始...')
+        setLoading(true)
+        const data = await getDocuments() // 全件取得
+        console.log('📥 取得したデータ:', data)
+        console.log('📊 データ件数:', data.length)
+        setDocuments(data)
+        console.log('✅ データセット完了. documents.length:', data.length)
+        setLoading(false)
+      } catch (error) {
+        console.error('❌ API読み込みエラー:', error)
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const getTypeIcon = (type: Document["type"]) => {
     switch (type) {
@@ -172,7 +79,7 @@ export function DocumentList() {
       },
     };
 
-    const { label, className } = config[type];
+    const { label, className } = config[type as keyof typeof config];
     return (
       <Badge variant="outline" className={`gap-1 ${className}`}>
         {getTypeIcon(type)}
@@ -181,7 +88,8 @@ export function DocumentList() {
     );
   };
 
-  const filteredDocuments = sampleDocuments.filter((doc) => {
+  // フィルタ＆検索
+  const filteredDocuments = documents.filter((doc) => {
     const matchesType = filterType === "all" || doc.type === filterType;
     const matchesSearch =
       searchQuery === "" ||
@@ -190,16 +98,55 @@ export function DocumentList() {
     return matchesType && matchesSearch;
   });
 
+  // デバッグ情報
+  console.log('📊 フィルタ状況:', { 
+    documents: documents.length, 
+    filterType, 
+    searchQuery, 
+    filteredDocuments: filteredDocuments.length 
+  });
+
+  // ファイルダウンロード処理
+  const handleDownload = (document: Document) => {
+    if (document.fileUrl) {
+      console.log('📅 ファイルダウンロード:', document.subject)
+      // 署名付きURLで直接ダウンロード
+      window.open(document.fileUrl, '_blank')
+    } else {
+      console.warn('⚠️ ダウンロードURLが見つかりません:', document)
+      alert('ファイルのダウンロードURLが利用できません。')
+    }
+  }
+
+  // ファイルサイズを読みやすく表示する関数
+  const formatFileSize = (bytes: number | null | undefined): string => {
+    if (!bytes || bytes === 0) return '-'
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    return `${Math.round(bytes / Math.pow(1024, i) * 100) / 100} ${sizes[i]}`
+  }
+
   // ページネーション計算
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentDocuments = filteredDocuments.slice(startIndex, endIndex);
 
-  // フィルター変更時にページをリセット
+  // フィルター・検索変更時にページをリセット
   useEffect(() => {
     setCurrentPage(1);
   }, [filterType, searchQuery]);
+
+  // ローディング・エラー表示
+  if (loading) {
+    return (
+      <div className="py-10 text-center text-slate-600">
+        📡 API からデータを読み込み中です…
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -217,7 +164,9 @@ export function DocumentList() {
           {/* Type Filter */}
           <div className="flex items-center gap-3">
             <Filter className="size-5 text-slate-600 flex-shrink-0" />
-            <label className="text-slate-700 min-w-fit text-sm md:text-base">種別:</label>
+            <label className="text-slate-700 min-w-fit text-sm md:text-base">
+              種別:
+            </label>
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="すべて" />
@@ -270,7 +219,10 @@ export function DocumentList() {
           <TableBody>
             {currentDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-slate-500">
+                <TableCell
+                  colSpan={5}
+                  className="text-center py-12 text-slate-500"
+                >
                   <FileText className="size-12 mx-auto mb-3 text-slate-300" />
                   <p>該当する文書が見つかりませんでした</p>
                 </TableCell>
@@ -289,10 +241,15 @@ export function DocumentList() {
                     {doc.sender}
                   </TableCell>
                   <TableCell className="text-slate-600">
-                    {doc.receivedDate}
+                    {doc.receivedAt}
                   </TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDownload(doc)}
+                      disabled={!doc.fileUrl}
+                    >
                       開く
                     </Button>
                   </TableCell>
@@ -318,20 +275,30 @@ export function DocumentList() {
             >
               <div className="flex items-start justify-between mb-3">
                 {getTypeBadge(doc.type)}
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleDownload(doc)}
+                  disabled={!doc.fileUrl}
+                >
                   開く
                 </Button>
               </div>
-              <h3 className="text-slate-900 mb-2">
-                {doc.subject}
-              </h3>
+              <h3 className="text-slate-900 mb-2">{doc.subject}</h3>
               <div className="space-y-1 text-sm">
                 <p className="text-slate-700">
                   <span className="text-slate-500">送信者:</span> {doc.sender}
                 </p>
                 <p className="text-slate-600">
-                  <span className="text-slate-500">受信日時:</span> {doc.receivedDate}
+                  <span className="text-slate-500">受信日時:</span>{" "}
+                  {doc.receivedAt}
                 </p>
+                {doc.fileSize && (
+                  <p className="text-slate-600">
+                    <span className="text-slate-500">ファイルサイズ:</span>{" "}
+                    {formatFileSize(doc.fileSize)}
+                  </p>
+                )}
               </div>
             </div>
           ))
@@ -343,19 +310,20 @@ export function DocumentList() {
         <div className="flex justify-center items-center gap-4 mt-6">
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
             className="flex items-center gap-2 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
           >
             ← 前へ
           </Button>
-          
+
           <div className="flex items-center gap-2">
             {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(page => 
-                page === 1 || 
-                page === totalPages || 
-                Math.abs(page - currentPage) <= 1
+              .filter(
+                (page) =>
+                  page === 1 ||
+                  page === totalPages ||
+                  Math.abs(page - currentPage) <= 1
               )
               .map((page, index, array) => (
                 <div key={page} className="flex items-center gap-2">
@@ -367,21 +335,22 @@ export function DocumentList() {
                     size="sm"
                     onClick={() => setCurrentPage(page)}
                     className={`min-w-[2.5rem] ${
-                      currentPage === page 
-                        ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-700" 
+                      currentPage === page
+                        ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-700"
                         : "bg-white hover:bg-slate-50 border-slate-300 text-slate-700"
                     }`}
                   >
                     {page}
                   </Button>
                 </div>
-              ))
-            }
+              ))}
           </div>
 
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
             disabled={currentPage === totalPages}
             className="flex items-center gap-2 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
           >
