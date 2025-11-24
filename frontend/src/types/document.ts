@@ -7,4 +7,7 @@ export interface Document {
     s3Key?: string
     extractedText?: string
     metadata?: Record<string, unknown>
+    // S3関連の追加フィールド
+    fileUrl?: string    // 署名付きダウンロードURL
+    fileSize?: number | null   // ファイルサイズ（bytes）
 }

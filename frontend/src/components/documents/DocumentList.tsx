@@ -106,6 +106,26 @@ export function DocumentList() {
     filteredDocuments: filteredDocuments.length 
   });
 
+  // ファイルダウンロード処理
+  const handleDownload = (document: Document) => {
+    if (document.fileUrl) {
+      console.log('📅 ファイルダウンロード:', document.subject)
+      // 署名付きURLで直接ダウンロード
+      window.open(document.fileUrl, '_blank')
+    } else {
+      console.warn('⚠️ ダウンロードURLが見つかりません:', document)
+      alert('ファイルのダウンロードURLが利用できません。')
+    }
+  }
+
+  // ファイルサイズを読みやすく表示する関数
+  const formatFileSize = (bytes: number | null | undefined): string => {
+    if (!bytes || bytes === 0) return '-'
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    return `${Math.round(bytes / Math.pow(1024, i) * 100) / 100} ${sizes[i]}`
+  }
+
   // ページネーション計算
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -224,7 +244,12 @@ export function DocumentList() {
                     {doc.receivedAt}
                   </TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDownload(doc)}
+                      disabled={!doc.fileUrl}
+                    >
                       開く
                     </Button>
                   </TableCell>
@@ -250,7 +275,12 @@ export function DocumentList() {
             >
               <div className="flex items-start justify-between mb-3">
                 {getTypeBadge(doc.type)}
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleDownload(doc)}
+                  disabled={!doc.fileUrl}
+                >
                   開く
                 </Button>
               </div>
@@ -263,6 +293,12 @@ export function DocumentList() {
                   <span className="text-slate-500">受信日時:</span>{" "}
                   {doc.receivedAt}
                 </p>
+                {doc.fileSize && (
+                  <p className="text-slate-600">
+                    <span className="text-slate-500">ファイルサイズ:</span>{" "}
+                    {formatFileSize(doc.fileSize)}
+                  </p>
+                )}
               </div>
             </div>
           ))
