@@ -157,6 +157,82 @@ export const handler = async (
             }
         }
 
+        // -----------------------
+        // PATCH /documents/{id}/tags (タグ更新)
+        // -----------------------
+        if (method === 'PATCH' && path.match(/^\/documents\/[^/]+\/tags$/)) {
+            const id = path.split('/')[2]
+
+            if (!id || !event.body) {
+                return {
+                    statusCode: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'Invalid request' }),
+                }
+            }
+
+            const body = JSON.parse(event.body) as {
+                tags?: string[]
+                folder?: string
+                category?: string
+            }
+
+            const updateExpression: string[] = []
+            const expressionAttributeNames: Record<string, string> = {}
+            const expressionAttributeValues: Record<string, unknown> = {}
+
+            if (body.tags !== undefined) {
+                updateExpression.push('#tags = :tags')
+                expressionAttributeNames['#tags'] = 'tags'
+                expressionAttributeValues[':tags'] = body.tags
+            }
+
+            if (body.folder !== undefined) {
+                updateExpression.push('#folder = :folder')
+                expressionAttributeNames['#folder'] = 'folder'
+                expressionAttributeValues[':folder'] = body.folder
+            }
+
+            if (body.category !== undefined) {
+                updateExpression.push('#category = :category')
+                expressionAttributeNames['#category'] = 'category'
+                expressionAttributeValues[':category'] = body.category
+            }
+
+            if (updateExpression.length === 0) {
+                return {
+                    statusCode: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'No fields to update' }),
+                }
+            }
+
+            updateExpression.push('#updatedAt = :updatedAt')
+            expressionAttributeNames['#updatedAt'] = 'updatedAt'
+            expressionAttributeValues[':updatedAt'] = new Date().toISOString()
+
+            const { UpdateCommand } = await import('@aws-sdk/lib-dynamodb')
+            const updateCommand = new UpdateCommand({
+                TableName: TABLE_NAME,
+                Key: { id },
+                UpdateExpression: `SET ${updateExpression.join(', ')}`,
+                ExpressionAttributeNames: expressionAttributeNames,
+                ExpressionAttributeValues: expressionAttributeValues,
+                ReturnValues: 'ALL_NEW',
+            })
+
+            const result = await dynamoClient.send(updateCommand)
+
+            return {
+                statusCode: 200,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                body: JSON.stringify(result.Attributes),
+            }
+        }
+
         return {
             statusCode: 404,
             body: JSON.stringify({ message: 'Not Found' }),
