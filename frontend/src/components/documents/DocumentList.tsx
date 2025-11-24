@@ -39,6 +39,12 @@ export function DocumentList() {
         const data = await getDocuments() // 全件取得
         console.log('📥 取得したデータ:', data)
         console.log('📊 データ件数:', data.length)
+        // タグ情報のデバッグ
+        data.forEach((doc, idx) => {
+          if (doc.tags) {
+            console.log(`📌 Doc ${idx}: ${doc.subject} has tags:`, doc.tags)
+          }
+        })
         setDocuments(data)
         console.log('✅ データセット完了. documents.length:', data.length)
         setLoading(false)
@@ -102,16 +108,48 @@ export function DocumentList() {
     const matchesType = filterType === "all" || doc.type === filterType;
     const matchesSearch =
       searchQuery === "" ||
-      doc.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.sender.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTags = selectedTags.length === 0 || 
-      (doc.tags && selectedTags.some(tag => doc.tags?.includes(tag)));
-    return matchesType && matchesSearch && matchesTags;
+      (doc.subject && doc.subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (doc.sender && doc.sender.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // タグフィルター: 選択されたタグがない場合は全て表示
+    // 選択されたタグがある場合は、ドキュメントのタグに含まれるものだけ表示
+    let matchesTags = true;
+    if (selectedTags.length > 0) {
+      if (!doc.tags || !Array.isArray(doc.tags) || doc.tags.length === 0) {
+        matchesTags = false;
+      } else {
+        matchesTags = selectedTags.some(selectedTag => 
+          doc.tags.some(docTag => docTag === selectedTag)
+        );
+      }
+    }
+    
+    const result = matchesType && matchesSearch && matchesTags;
+    
+    // デバッグ: フィルター対象の最初の文書をログ出力
+    if (selectedTags.length > 0 && doc.tags && doc.tags.length > 0) {
+      console.log('🔍 Checking doc:', {
+        subject: doc.subject,
+        docTags: doc.tags,
+        selectedTags,
+        matchesTags,
+        result
+      });
+    }
+    
+    return result;
   });
 
   // デバッグ情報
   console.log('📊 フィルタ状況:', { 
-    documents: documents.length, 
+    documents: documents.length,
+    selectedTags,
+    selectedTagsDetail: selectedTags.map(t => `"${t}"`),
+    documentsWithTags: documents.filter(d => d.tags && d.tags.length > 0).length,
+    sampleDocTags: documents.filter(d => d.tags && d.tags.length > 0).map(d => ({
+      subject: d.subject,
+      tags: d.tags
+    })),
     filterType, 
     searchQuery, 
     filteredDocuments: filteredDocuments.length 
