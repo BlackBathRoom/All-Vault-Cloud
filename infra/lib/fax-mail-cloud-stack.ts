@@ -26,7 +26,7 @@ export class FaxMailCloudStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props)
 
-        // S3 Bucket (単一バケットでprefix構造により管理)
+        // S3 Bucket (既存バケットを参照)
         // prefix構造:
         // - uploads/raw/     : FAX画像アップロード先
         // - uploads/text/    : OCR抽出テキスト保存先
@@ -34,85 +34,25 @@ export class FaxMailCloudStack extends cdk.Stack {
         // - ses-raw-mail/    : SES受信メールのEML保存先
         // - emails/text/     : メール本文テキスト保存先
         // - docs/email/      : メール添付PDF保存先
-        const faxSystemBucket = new s3.Bucket(this, 'FaxSystemBucket', {
-            bucketName: 'avc-system',
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-            autoDeleteObjects: true,
-            cors: [
-                {
-                    allowedMethods: [
-                        s3.HttpMethods.GET,
-                        s3.HttpMethods.PUT,
-                        s3.HttpMethods.POST,
-                    ],
-                    allowedOrigins: ['*'],
-                    allowedHeaders: ['*'],
-                },
-            ],
-        })
+        const faxSystemBucket = s3.Bucket.fromBucketName(
+            this,
+            'FaxSystemBucket',
+            'avc-system'
+        )
 
-        // DynamoDB Table
-        const documentsTable = new dynamodb.Table(this, 'DocumentsTable', {
-            tableName: 'avc-Documents',
-            partitionKey: {
-                name: 'id',
-                type: dynamodb.AttributeType.STRING,
-            },
-            billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-        })
-
-        // GSI: type と createdAt で検索可能に
-        documentsTable.addGlobalSecondaryIndex({
-            indexName: 'type-createdAt-index',
-            partitionKey: {
-                name: 'type',
-                type: dynamodb.AttributeType.STRING,
-            },
-            sortKey: {
-                name: 'createdAt',
-                type: dynamodb.AttributeType.STRING,
-            },
-        })
-
-        // GSI: sender と createdAt で検索可能に
-        documentsTable.addGlobalSecondaryIndex({
-            indexName: 'sender-createdAt-index',
-            partitionKey: {
-                name: 'sender',
-                type: dynamodb.AttributeType.STRING,
-            },
-            sortKey: {
-                name: 'createdAt',
-                type: dynamodb.AttributeType.STRING,
-            },
-        })
-
-        // GSI: folder と createdAt で検索可能に（フォルダ分類用）
-        documentsTable.addGlobalSecondaryIndex({
-            indexName: 'folder-createdAt-index',
-            partitionKey: {
-                name: 'folder',
-                type: dynamodb.AttributeType.STRING,
-            },
-            sortKey: {
-                name: 'createdAt',
-                type: dynamodb.AttributeType.STRING,
-            },
-        })
-
-        // GSI: category と createdAt で検索可能に（カテゴリ分類用）
-        documentsTable.addGlobalSecondaryIndex({
-            indexName: 'category-createdAt-index',
-            partitionKey: {
-                name: 'category',
-                type: dynamodb.AttributeType.STRING,
-            },
-            sortKey: {
-                name: 'createdAt',
-                type: dynamodb.AttributeType.STRING,
-            },
-        })
+        // DynamoDB Table (既存テーブルを参照)
+        const documentsTable = dynamodb.Table.fromTableName(
+            this,
+            'DocumentsTable',
+            'Documents'
+        )
+        
+        // 注意: GSIは既存テーブルに手動で追加する必要があります
+        // AWS Console または AWS CLIで以下のGSIを追加してください:
+        // 1. type-createdAt-index (PK: type, SK: createdAt)
+        // 2. sender-createdAt-index (PK: sender, SK: createdAt)
+        // 3. folder-createdAt-index (PK: folder, SK: createdAt)
+        // 4. category-createdAt-index (PK: category, SK: createdAt)
 
         // Lambda Functions
         const imageOcrFunction = new NodejsFunction(this, 'ImageOCRFunction', {

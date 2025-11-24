@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, FileText, Mail, Printer } from "lucide-react";
+import { Search, Filter, FileText, Mail, Printer, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -19,7 +19,7 @@ import {
 } from "../ui/table";
 import { Badge } from "../ui/badge";
 import { getDocuments } from "../../api/documentsApi";
-import { Document } from "../../types/document";
+import { Document, TAG_LABELS, PREDEFINED_TAGS, type PredefinedTag } from "../../types/document";
 
 export function DocumentList() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -27,6 +27,7 @@ export function DocumentList() {
 
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8; // 1ページあたりの表示件数
 
@@ -88,6 +89,14 @@ export function DocumentList() {
     );
   };
 
+  // タグフィルターのトグル
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+    setCurrentPage(1); // フィルター変更時はページをリセット
+  };
+
   // フィルタ＆検索
   const filteredDocuments = documents.filter((doc) => {
     const matchesType = filterType === "all" || doc.type === filterType;
@@ -95,7 +104,9 @@ export function DocumentList() {
       searchQuery === "" ||
       doc.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.sender.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesSearch;
+    const matchesTags = selectedTags.length === 0 || 
+      (doc.tags && selectedTags.some(tag => doc.tags?.includes(tag)));
+    return matchesType && matchesSearch && matchesTags;
   });
 
   // デバッグ情報
@@ -191,6 +202,42 @@ export function DocumentList() {
               className="flex-1"
             />
           </div>
+
+          {/* Tag Filter */}
+          <div className="flex flex-col gap-2">
+            <label className="text-slate-700 text-sm md:text-base">
+              タグでフィルター:
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PREDEFINED_TAGS.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className={`cursor-pointer transition-colors ${
+                    selectedTags.includes(tag)
+                      ? "bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200"
+                      : "bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100"
+                  }`}
+                  onClick={() => toggleTag(tag)}
+                >
+                  {TAG_LABELS[tag as PredefinedTag]}
+                  {selectedTags.includes(tag) && (
+                    <X className="ml-1 size-3" />
+                  )}
+                </Badge>
+              ))}
+            </div>
+            {selectedTags.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedTags([])}
+                className="self-start text-slate-600 hover:text-slate-900"
+              >
+                フィルターをクリア
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -233,7 +280,24 @@ export function DocumentList() {
                   key={doc.id}
                   className="hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <TableCell>{getTypeBadge(doc.type)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-2">
+                      {getTypeBadge(doc.type)}
+                      {doc.tags && doc.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {doc.tags.map((tag) => (
+                            <Badge
+                              key={tag}
+                              variant="outline"
+                              className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                            >
+                              {TAG_LABELS[tag as PredefinedTag] || tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-slate-900">
                     {doc.subject}
                   </TableCell>
@@ -274,7 +338,22 @@ export function DocumentList() {
               className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 active:bg-slate-50 transition-colors"
             >
               <div className="flex items-start justify-between mb-3">
-                {getTypeBadge(doc.type)}
+                <div className="flex flex-col gap-2">
+                  {getTypeBadge(doc.type)}
+                  {doc.tags && doc.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {doc.tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="outline"
+                          className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                        >
+                          {TAG_LABELS[tag as PredefinedTag] || tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <Button 
                   variant="outline" 
                   size="sm"

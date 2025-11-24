@@ -1,0 +1,68 @@
+Bundling asset FaxMailCloudStack/ImageOCRFunction/Code/Stage...
+
+  ...267535447071d870b462394da0091cb69c9a5ac7e2315fda8abf5a714/index.js  1.8kb
+  ...35447071d870b462394da0091cb69c9a5ac7e2315fda8abf5a714/index.js.map  2.3kb
+
+⚡ Done in 6ms
+Bundling asset FaxMailCloudStack/MailIngestFunction/Code/Stage...
+
+  ...ac6b551d584033a33d0fd75960b27c84955b6cc835f870457e357e8/index.js  1.6mb ⚠️
+  ...551d584033a33d0fd75960b27c84955b6cc835f870457e357e8/index.js.map  2.7mb
+
+⚡ Done in 127ms
+Bundling asset FaxMailCloudStack/ApiHandlerFunction/Code/Stage...
+
+  ...c638ea559cb79df8bece28076284cb7f5d616710e58aa391fa619c8d/index.js   9.4kb
+  ...ea559cb79df8bece28076284cb7f5d616710e58aa391fa619c8d/index.js.map  26.7kb
+
+⚡ Done in 5ms
+Bundling asset FaxMailCloudStack/MailSendFunction/Code/Stage...
+
+  ...0d670e103e301e7b321fd027f074aa570966c8e310bb3ec1a79e0c29e/index.js  1.4kb
+  ...0e103e301e7b321fd027f074aa570966c8e310bb3ec1a79e0c29e/index.js.map  3.1kb
+
+⚡ Done in 5ms
+
+✨  Synthesis time: 7.1s
+
+FaxMailCloudStack: deploying... [1/1]
+FaxMailCloudStack: creating CloudFormation changeset...
+
+NOTICES         (What's this? https://github.com/aws/aws-cdk/wiki/CLI-Notices)
+
+34892	CDK CLI will collect telemetry data on command usage starting at version 2.1100.0 (unless opted out)
+
+	Overview: We do not collect customer content and we anonymize the
+	          telemetry we do collect. See the attached issue for more
+	          information on what data is collected, why, and how to
+	          opt-out. Telemetry will NOT be collected for any CDK CLI
+	          version prior to version 2.1100.0 - regardless of
+	          opt-in/out. You can also preview the telemetry we will start
+	          collecting by logging it to a local file, by adding
+	          `--unstable=telemetry --telemetry-file=my/local/file` to any
+	          `cdk` command.
+
+	Affected versions: cli: ^2.0.0
+
+	More information at: https://github.com/aws/aws-cdk/issues/34892
+
+
+30717	(lambda-nodejs): breaking change in esbuild causes import module error
+
+	Overview: ESBuild released a breaking change on version 0.22.0 that
+	          changed the default bundling behavior. `lambda-nodejs`'s
+	          `NodeJsFunction` now to fails to synthesize with the error
+	          message `Runtime.ImportModuleError: Cannot find module
+	          'module'`. This issue exists on all CDK versions up to and
+	          including `2.147.2`. The workaround is either pin the
+	          esbuild version to ~0.21 or add `--packages=bundle` to
+	          `bundling.esbuildArgs` property (this option only works for
+	          esbuild version >= `0.22.0`).
+
+	Affected versions: aws-cdk-lib.aws_lambda_nodejs.: >=2.0.0 <= 2.147.2
+
+	More information at: https://github.com/aws/aws-cdk/issues/30717
+
+
+If you don’t want to see a notice anymore, use "cdk acknowledge <id>". For example, "cdk acknowledge 34892".
+❌  FaxMailCloudStack failed: ToolkitError: Failed to create ChangeSet cdk-deploy-change-set on FaxMailCloudStack: FAILED, The following hook(s)/validation failed: [AWS::EarlyValidation::ResourceExistenceCheck]. To troubleshoot Early Validation errors, use the DescribeEvents API for detailed failure information.
