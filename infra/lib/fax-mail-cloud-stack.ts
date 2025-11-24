@@ -212,7 +212,18 @@ export class FaxMailCloudStack extends cdk.Stack {
         // ApiHandlerFunction: 全prefix読み取り、uploads/raw/ への書き込み(presigned URL用)
         faxSystemBucket.grantRead(apiHandlerFunction)
         faxSystemBucket.grantPut(apiHandlerFunction, 'uploads/raw/*')
-        documentsTable.grantReadData(apiHandlerFunction)
+        documentsTable.grantReadWriteData(apiHandlerFunction) // タグ更新のため書き込み権限も必要
+        
+        // ApiHandlerFunction: Bedrock権限を追加
+        apiHandlerFunction.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['bedrock:InvokeModel'],
+                resources: [
+                    'arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0',
+                ],
+            })
+        )
 
         // MailSendFunction: SES送信権限とS3読み取り(PDF添付用)
         faxSystemBucket.grantRead(mailSendFunction)
@@ -289,6 +300,10 @@ export class FaxMailCloudStack extends cdk.Stack {
         // タグ管理エンドポイント
         const tags = document.addResource('tags')
         tags.addMethod('PATCH', apiIntegration)
+        
+        // AI自動分類エンドポイント
+        const classify = document.addResource('classify')
+        classify.addMethod('POST', apiIntegration)
 
         const uploads = api.root.addResource('uploads')
         const presignedUrl = uploads.addResource('presigned-url')
