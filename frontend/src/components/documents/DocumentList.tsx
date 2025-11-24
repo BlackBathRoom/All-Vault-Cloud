@@ -32,10 +32,19 @@ export function DocumentList() {
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true)
-      const data = await getDocuments("fax") // 全件なら引数なし
-      setDocuments(data)
-      setLoading(false)
+      try {
+        console.log('📡 API読み込み開始...')
+        setLoading(true)
+        const data = await getDocuments() // 全件取得
+        console.log('📥 取得したデータ:', data)
+        console.log('📊 データ件数:', data.length)
+        setDocuments(data)
+        console.log('✅ データセット完了. documents.length:', data.length)
+        setLoading(false)
+      } catch (error) {
+        console.error('❌ API読み込みエラー:', error)
+        setLoading(false)
+      }
     }
     load()
   }, [])
@@ -89,6 +98,14 @@ export function DocumentList() {
     return matchesType && matchesSearch;
   });
 
+  // デバッグ情報
+  console.log('📊 フィルタ状況:', { 
+    documents: documents.length, 
+    filterType, 
+    searchQuery, 
+    filteredDocuments: filteredDocuments.length 
+  });
+
   // ページネーション計算
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -104,7 +121,7 @@ export function DocumentList() {
   if (loading) {
     return (
       <div className="py-10 text-center text-slate-600">
-        データを読み込み中です…
+        📡 API からデータを読み込み中です…
       </div>
     );
   }
