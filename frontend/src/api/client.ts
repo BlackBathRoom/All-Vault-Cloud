@@ -1,4 +1,6 @@
-const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? 'https://24bdzigj8k.execute-api.ap-northeast-1.amazonaws.com'
+/// <reference types="vite/client" />
+
+const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? 'https://24bdzigj8k.execute-api.ap-northeast-1.amazonaws.com'
 
 export const apiClient = {
     async get(endpoint: string) {
