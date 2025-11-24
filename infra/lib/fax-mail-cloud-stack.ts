@@ -88,6 +88,32 @@ export class FaxMailCloudStack extends cdk.Stack {
             },
         })
 
+        // GSI: folder と createdAt で検索可能に（フォルダ分類用）
+        documentsTable.addGlobalSecondaryIndex({
+            indexName: 'folder-createdAt-index',
+            partitionKey: {
+                name: 'folder',
+                type: dynamodb.AttributeType.STRING,
+            },
+            sortKey: {
+                name: 'createdAt',
+                type: dynamodb.AttributeType.STRING,
+            },
+        })
+
+        // GSI: category と createdAt で検索可能に（カテゴリ分類用）
+        documentsTable.addGlobalSecondaryIndex({
+            indexName: 'category-createdAt-index',
+            partitionKey: {
+                name: 'category',
+                type: dynamodb.AttributeType.STRING,
+            },
+            sortKey: {
+                name: 'createdAt',
+                type: dynamodb.AttributeType.STRING,
+            },
+        })
+
         // Lambda Functions
         const imageOcrFunction = new NodejsFunction(this, 'ImageOCRFunction', {
             entry: path.join(__dirname, '../../backend/dist/functions/image-ocr.js'),
@@ -259,6 +285,10 @@ export class FaxMailCloudStack extends cdk.Stack {
 
         const document = documents.addResource('{id}')
         document.addMethod('GET', apiIntegration)
+        
+        // タグ管理エンドポイント
+        const tags = document.addResource('tags')
+        tags.addMethod('PATCH', apiIntegration)
 
         const uploads = api.root.addResource('uploads')
         const presignedUrl = uploads.addResource('presigned-url')
