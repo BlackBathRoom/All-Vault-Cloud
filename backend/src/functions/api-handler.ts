@@ -1,9 +1,10 @@
 // backend/src/functions/api-handler.ts
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import { ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb'
+import { ScanCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
 import { dynamoClient } from '../lib/dynamoClient'
 import { generatePresignedUrl } from '../lib/presignedUrl'
+import { classifyDocumentFromS3 } from '../lib/bedrockClassifier'
 import { Document } from '../lib/types'   // ここ重要★
 
 const TABLE_NAME = process.env.TABLE_NAME || ''
@@ -230,6 +231,104 @@ export const handler = async (
                     'Access-Control-Allow-Origin': '*',
                 },
                 body: JSON.stringify(result.Attributes),
+            }
+        }
+
+        // -----------------------
+        // POST /documents/{id}/classify (AI自動分類)
+        // -----------------------
+        if (method === 'POST' && path.match(/^\/documents\/[^/]+\/classify$/)) {
+            const id = path.split('/')[2]
+
+            if (!id) {
+                return {
+                    statusCode: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'Invalid document id' }),
+                }
+            }
+
+            // 1. DynamoDBからドキュメント情報を取得
+            const getCommand = new GetCommand({
+                TableName: TABLE_NAME,
+                Key: { id },
+            })
+            const getResult = await dynamoClient.send(getCommand)
+
+            if (!getResult.Item || !isDocument(getResult.Item)) {
+                return {
+                    statusCode: 404,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'Document not found' }),
+                }
+            }
+
+            const document = getResult.Item
+
+            // 2. textKeyが存在するか確認（OCR済み）
+            if (!document.extractedText && !document.s3Key) {
+                return {
+                    statusCode: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: 'Document does not have text content. Please ensure OCR has been performed.' 
+                    }),
+                }
+            }
+
+            // 3. Bedrockで分類（extractedTextまたはs3Keyから）
+            let classification
+            try {
+                if (document.extractedText) {
+                    const { classifyDocument } = await import('../lib/bedrockClassifier')
+                    classification = await classifyDocument(document.extractedText)
+                } else {
+                    // textKeyがある場合はS3から取得
+                    const textKey = document.s3Key.replace('/pdf/', '/text/').replace('.pdf', '.txt')
+                    classification = await classifyDocumentFromS3(BUCKET_NAME, textKey)
+                }
+            } catch (error) {
+                console.error('Bedrock classification error:', error)
+                return {
+                    statusCode: 500,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: 'AI classification failed',
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                    }),
+                }
+            }
+
+            // 4. DynamoDBを更新
+            const updateCommand = new UpdateCommand({
+                TableName: TABLE_NAME,
+                Key: { id },
+                UpdateExpression:
+                    'SET tags = :tags, category = :category, classificationConfidence = :confidence, updatedAt = :updatedAt',
+                ExpressionAttributeValues: {
+                    ':tags': classification.tags,
+                    ':category': classification.category,
+                    ':confidence': classification.confidence,
+                    ':updatedAt': new Date().toISOString(),
+                },
+                ReturnValues: 'ALL_NEW',
+            })
+
+            const updateResult = await dynamoClient.send(updateCommand)
+
+            return {
+                statusCode: 200,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                body: JSON.stringify({
+                    document: updateResult.Attributes,
+                    classification: {
+                        ...classification,
+                        message: '自動分類が完了しました',
+                    },
+                }),
             }
         }
 
