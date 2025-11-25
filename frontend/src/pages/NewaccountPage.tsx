@@ -1,32 +1,32 @@
-import { useState } from 'react';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
+import { useState } from 'react'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 
 export default function NewaccountPage() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+        e.preventDefault()
+        setError('')
         
         if (password !== confirmPassword) {
-            setError('パスワードが一致しません');
-            return;
+            setError('パスワードが一致しません')
+            return
         }
         
-        setLoading(true);
+        setLoading(true)
         // TODO: アカウント作成API連携
         setTimeout(() => {
-            setLoading(false);
-            alert('アカウントが作成されました！');
-        }, 1000);
-    };
+            setLoading(false)
+            alert('アカウントが作成されました！')
+        }, 1000)
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#181f2a] to-[#232b38]">
@@ -161,5 +161,5 @@ export default function NewaccountPage() {
                 </div>
             </div>
         </div>
-    );
+    )
 }

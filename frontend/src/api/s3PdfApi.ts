@@ -9,28 +9,28 @@ const PDF_FILES_ENDPOINT = '/pdf-files'
 
 // API → UI 用に変換
 const mapToPdfViewModel = (item: S3PdfFile): S3PdfFileViewModel => {
-  const fileName = item.key.split('/').pop() ?? item.key
+    const fileName = item.key.split('/').pop() ?? item.key
 
-  const sizeText =
+    const sizeText =
     item.size != null ? `${(item.size / 1024).toFixed(1)} KB` : '-'
 
-  const lastModifiedText =
+    const lastModifiedText =
     item.lastModified != null
-      ? new Date(item.lastModified).toLocaleString('ja-JP', {
-          timeZone: 'Asia/Tokyo',
+        ? new Date(item.lastModified).toLocaleString('ja-JP', {
+            timeZone: 'Asia/Tokyo',
         })
-      : '-'
+        : '-'
 
-  return {
-    ...item,
-    fileName,
-    sizeText,
-    lastModifiedText,
-  }
+    return {
+        ...item,
+        fileName,
+        sizeText,
+        lastModifiedText,
+    }
 }
 
 // PDF 一覧取得
 export const listPdfFiles = async (): Promise<S3PdfFileViewModel[]> => {
-  const apiData: S3PdfFile[] = await apiClient.get(PDF_FILES_ENDPOINT)
-  return apiData.map(mapToPdfViewModel)
+    const apiData: S3PdfFile[] = await apiClient.get(PDF_FILES_ENDPOINT)
+    return apiData.map(mapToPdfViewModel)
 }
