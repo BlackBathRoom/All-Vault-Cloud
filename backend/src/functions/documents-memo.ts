@@ -74,7 +74,7 @@ export const handler = async (
             }
         }
 
-        const body = event.body ? JSON.parse(event.body) as Partial<DocumentMemo> : {}
+        const body = event.body ? (JSON.parse(event.body) as Partial<DocumentMemo>) : {}
 
         // ----- POST /documents/{id}/memos -----
         if (method === 'POST' && !memoId) {

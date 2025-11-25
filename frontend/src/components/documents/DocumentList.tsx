@@ -22,6 +22,8 @@ import { getDocuments, getDocumentMemos, createDocumentMemo } from '../../api/do
 import type { DocumentMemo } from '../../api/documentsApi'
 import { Document } from '../../types/document'
 
+  
+
 export function DocumentList() {
     const [documents, setDocuments] = useState<Document[]>([])
     const [loading, setLoading] = useState(false)

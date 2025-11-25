@@ -116,26 +116,31 @@ export const getDocumentById = async (id: string): Promise<Document> => {
 
 
 export type DocumentMemo = {
-    documentId: string
     memoId: string
     text: string
-    page?: number | null
+    page: number | null
     createdAt: string
     updatedAt: string
   }
   
-// メモ一覧取得 GET /documents/{id}/memos
-export const getDocumentMemos = async (documentId: string): Promise<DocumentMemo[]> => {
+  
+// メモ一覧 GET /documents/{id}/memos
+export const getDocumentMemos = async (
+    documentId: string
+): Promise<DocumentMemo[]> => {
     try {
-        const response: DocumentMemo[] = await apiClient.get(`/documents/${documentId}/memos`)
+        const response = await apiClient.get(
+            `/documents/${documentId}/memos`
+        )
         return response
     } catch (error) {
         console.error('❌ メモ一覧取得エラー:', error)
-        throw new Error(`メモの取得に失敗しました: ${error}`)
+        throw new Error('メモ一覧の取得に失敗しました')
     }
 }
   
-/// メモ作成 POST /documents/{id}/memos
+  
+// メモ作成 POST /documents/{id}/memos
 export const createDocumentMemo = async (
     documentId: string,
     input: { text: string; page?: number | null }
@@ -145,17 +150,18 @@ export const createDocumentMemo = async (
             text: input.text,
             page: input.page ?? null,
         }
-
+  
         const response = await apiClient.post(
             `/documents/${documentId}/memos`,
             payload
-        )
-
+        ) as DocumentMemo
+  
         return response
     } catch (error) {
         console.error('❌ メモ作成エラー詳細:', error)
         throw new Error('メモの作成に失敗しました')
     }
 }
+  
 
   
