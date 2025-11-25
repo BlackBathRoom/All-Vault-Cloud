@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Filter, FileText, Mail, Printer } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -18,7 +18,8 @@ import {
     TableRow,
 } from '../ui/table'
 import { Badge } from '../ui/badge'
-import { getDocuments } from '../../api/documentsApi'
+import { getDocuments, getDocumentMemos, createDocumentMemo } from '../../api/documentsApi'
+import type { DocumentMemo } from '../../api/documentsApi'
 import { Document } from '../../types/document'
 
 export function DocumentList() {
@@ -29,6 +30,11 @@ export function DocumentList() {
     const [searchQuery, setSearchQuery] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 8 // 1ページあたりの表示件数
+    const [isMemoModalOpen, setIsMemoModalOpen] = useState(false)
+    const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+    const [memos, setMemos] = useState<DocumentMemo[]>([])
+    const [memoInput, setMemoInput] = useState('')
+    const longPressTimer = useRef<number | null>(null)
 
     useEffect(() => {
         const load = async () => {
@@ -136,6 +142,55 @@ export function DocumentList() {
     useEffect(() => {
         setCurrentPage(1)
     }, [filterType, searchQuery])
+  
+
+    const openMemoModal = async (doc: Document) => {
+        setSelectedDoc(doc)
+        setIsMemoModalOpen(true)
+        try {
+            const list = await getDocumentMemos(doc.id)
+            setMemos(list)
+        } catch (e) {
+            console.error('メモ取得エラー', e)
+            setMemos([])
+        }
+    }
+
+    const closeMemoModal = () => {
+        setIsMemoModalOpen(false)
+        setSelectedDoc(null)
+        setMemos([])
+        setMemoInput('')
+    }
+
+    const handleSaveMemo = async () => {
+        if (!selectedDoc || !memoInput.trim()) return
+        try {
+            const saved = await createDocumentMemo(selectedDoc.id, {
+                text: memoInput.trim(),
+            })
+            setMemos((prev) => [...prev, saved])
+            setMemoInput('')
+        } catch (e) {
+            console.error('メモ保存エラー', e)
+            alert('メモの保存に失敗しました')
+        }
+    }
+
+    const startLongPress = (doc: Document) => {
+        if (longPressTimer.current) return
+        longPressTimer.current = window.setTimeout(() => {
+            openMemoModal(doc)
+        }, 600) // 600ms 長押しで発火
+    }
+
+    const cancelLongPress = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current)
+            longPressTimer.current = null
+        }
+    }
+
 
     // ローディング・エラー表示
     if (loading) {
@@ -211,6 +266,7 @@ export function DocumentList() {
                         <TableRow className="bg-slate-50">
                             <TableHead className="w-[140px]">種別</TableHead>
                             <TableHead>件名</TableHead>
+                            <TableHead className="w-[120px]">メモ</TableHead>
                             <TableHead className="w-[200px]">送信者</TableHead>
                             <TableHead className="w-[180px]">受信日時</TableHead>
                             <TableHead className="w-[100px]">操作</TableHead>
@@ -220,7 +276,7 @@ export function DocumentList() {
                         {currentDocuments.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={5}
+                                    colSpan={6}
                                     className="text-center py-12 text-slate-500"
                                 >
                                     <FileText className="size-12 mx-auto mb-3 text-slate-300" />
@@ -236,6 +292,22 @@ export function DocumentList() {
                                     <TableCell>{getTypeBadge(doc.type)}</TableCell>
                                     <TableCell className="text-slate-900">
                                         {doc.subject}
+                                    </TableCell>
+                                    {/* メモボタン列 */}
+                                    <TableCell>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                            onClick={() => openMemoModal(doc)}
+                                            onMouseDown={() => startLongPress(doc)}
+                                            onMouseUp={cancelLongPress}
+                                            onMouseLeave={cancelLongPress}
+                                            onTouchStart={() => startLongPress(doc)}
+                                            onTouchEnd={cancelLongPress}
+                                        >
+                                            メモ
+                                        </Button>
                                     </TableCell>
                                     <TableCell className="text-slate-700">
                                         {doc.sender}
@@ -275,14 +347,29 @@ export function DocumentList() {
                         >
                             <div className="flex items-start justify-between mb-3">
                                 {getTypeBadge(doc.type)}
-                                <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleDownload(doc)}
-                                    disabled={!doc.fileUrl}
-                                >
-                  開く
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                        onClick={() => openMemoModal(doc)}
+                                        onMouseDown={() => startLongPress(doc)}
+                                        onMouseUp={cancelLongPress}
+                                        onMouseLeave={cancelLongPress}
+                                        onTouchStart={() => startLongPress(doc)}
+                                        onTouchEnd={cancelLongPress}
+                                    >
+                                        メモ
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleDownload(doc)}
+                                        disabled={!doc.fileUrl}
+                                    >
+                                        開く
+                                    </Button>
+                                </div>
                             </div>
                             <h3 className="text-slate-900 mb-2">{doc.subject}</h3>
                             <div className="space-y-1 text-sm">
@@ -356,6 +443,48 @@ export function DocumentList() {
                     >
             次へ →
                     </Button>
+                </div>
+            )}
+            {/* メモモーダル */}
+            {isMemoModalOpen && selectedDoc && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-2 text-lg font-semibold">
+                            メモ - {selectedDoc.subject}
+                        </h2>
+
+                        {/* 既存メモ一覧 */}
+                        <div className="mb-4 max-h-40 space-y-2 overflow-y-auto border rounded p-2 text-sm">
+                            {memos.length === 0 && (
+                                <p className="text-gray-400">まだメモはありません。</p>
+                            )}
+                            {memos.map((m) => (
+                                <div key={m.memoId} className="rounded border px-2 py-1">
+                                    <div className="text-xs text-gray-500">
+                                        {new Date(m.updatedAt).toLocaleString()}
+                                    </div>
+                                    <div>{m.text}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* 入力欄 */}
+                        <textarea
+                            className="mb-3 h-24 w-full rounded border px-2 py-1 text-sm"
+                            placeholder="メモを入力..."
+                            value={memoInput}
+                            onChange={(e) => setMemoInput(e.target.value)}
+                        />
+
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={closeMemoModal}>
+                                閉じる
+                            </Button>
+                            <Button onClick={handleSaveMemo}>
+                                保存
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

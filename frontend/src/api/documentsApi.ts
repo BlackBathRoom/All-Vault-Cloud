@@ -35,7 +35,7 @@ const mapToDocument = (item: S3ApiFile): Document => {
 }
 
 // 一覧取得：/documents は S3 の PDF一覧を返す Lambda に紐づいている
-export const getDocuments = async (_type?: string): Promise<Document[]> => {
+export const getDocuments = async (): Promise<Document[]> => {
     try {
         console.log('📡 S3 Lambda API 呼び出し開始...')
     
@@ -113,3 +113,49 @@ export const getDocumentById = async (id: string): Promise<Document> => {
 
     return doc
 }
+
+
+export type DocumentMemo = {
+    documentId: string
+    memoId: string
+    text: string
+    page?: number | null
+    createdAt: string
+    updatedAt: string
+  }
+  
+// メモ一覧取得 GET /documents/{id}/memos
+export const getDocumentMemos = async (documentId: string): Promise<DocumentMemo[]> => {
+    try {
+        const response: DocumentMemo[] = await apiClient.get(`/documents/${documentId}/memos`)
+        return response
+    } catch (error) {
+        console.error('❌ メモ一覧取得エラー:', error)
+        throw new Error(`メモの取得に失敗しました: ${error}`)
+    }
+}
+  
+/// メモ作成 POST /documents/{id}/memos
+export const createDocumentMemo = async (
+    documentId: string,
+    input: { text: string; page?: number | null }
+): Promise<DocumentMemo> => {
+    try {
+        const payload = {
+            text: input.text,
+            page: input.page ?? null,
+        }
+
+        const response = await apiClient.post(
+            `/documents/${documentId}/memos`,
+            payload
+        )
+
+        return response
+    } catch (error) {
+        console.error('❌ メモ作成エラー詳細:', error)
+        throw new Error('メモの作成に失敗しました')
+    }
+}
+
+  

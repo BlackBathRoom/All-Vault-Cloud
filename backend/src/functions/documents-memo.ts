@@ -3,19 +3,31 @@ import {
     APIGatewayProxyResultV2,
 } from 'aws-lambda'
 import {
-    PutCommand,
-    QueryCommand,
+    GetCommand,
     UpdateCommand,
-    DeleteCommand,
 } from '@aws-sdk/lib-dynamodb'
 import { dynamoClient } from '../lib/dynamoClient'
 import { randomUUID } from 'crypto'
 
-const MEMO_TABLE = process.env.MEMO_TABLE || 'DocumentMemos'
+const DOCUMENTS_TABLE = process.env.DOCUMENTS_TABLE || 'Documents'
 
-const corsHeaders = {
+const corsHeaders: Record<string, string> = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+}
+
+type DocumentMemo = {
+    memoId: string
+    text: string
+    page: number | null
+    createdAt: string
+    updatedAt: string
+}
+
+type DocumentItem = {
+    id: string
+    memos?: DocumentMemo[]
 }
 
 export const handler = async (
@@ -24,104 +36,185 @@ export const handler = async (
     try {
         const method = event.requestContext.http.method
         const documentId = event.pathParameters?.id
-        const memoId = event.pathParameters?.memoId
+        const memoId = event.pathParameters?.memoId ?? undefined
 
-        if (!documentId) {
-            return { statusCode: 400, body: 'documentId is required' }
-        }
-
-        // ---------- GET: メモ一覧 ----------
-        if (method === 'GET' && !memoId) {
-            const res = await dynamoClient.send(
-                new QueryCommand({
-                    TableName: MEMO_TABLE,
-                    KeyConditionExpression: 'documentId = :d',
-                    ExpressionAttributeValues: {
-                        ':d': documentId,
-                    },
-                })
-            )
+        // ----- OPTIONS (CORS プリフライト) -----
+        if (method === 'OPTIONS') {
             return {
-                statusCode: 200,
+                statusCode: 204,
                 headers: corsHeaders,
-                body: JSON.stringify(res.Items ?? []),
+                body: '',
             }
         }
 
-        const body = event.body ? JSON.parse(event.body) : {}
+        if (!documentId) {
+            return {
+                statusCode: 400,
+                headers: corsHeaders,
+                body: 'documentId is required',
+            }
+        }
 
-        // ---------- POST: メモ作成 ----------
-        if (method === 'POST') {
+        // ----- GET /documents/{id}/memos -----
+        if (method === 'GET' && !memoId) {
+            const res = await dynamoClient.send(
+                new GetCommand({
+                    TableName: DOCUMENTS_TABLE,
+                    Key: { id: documentId },
+                })
+            )
+
+            const item = res.Item as DocumentItem | undefined
+            const memos: DocumentMemo[] = item?.memos ?? []
+
+            return {
+                statusCode: 200,
+                headers: corsHeaders,
+                body: JSON.stringify(memos),
+            }
+        }
+
+        const body = event.body ? JSON.parse(event.body) as Partial<DocumentMemo> : {}
+
+        // ----- POST /documents/{id}/memos -----
+        if (method === 'POST' && !memoId) {
             const now = new Date().toISOString()
-            const newMemoId = randomUUID()
 
-            const item = {
-                documentId,
-                memoId: newMemoId,
+            const newMemo: DocumentMemo = {
+                memoId: randomUUID(),
                 text: body.text ?? '',
-                page: body.page ?? null,
+                page: typeof body.page === 'number' ? body.page : null,
                 createdAt: now,
                 updatedAt: now,
             }
 
             await dynamoClient.send(
-                new PutCommand({
-                    TableName: MEMO_TABLE,
-                    Item: item,
+                new UpdateCommand({
+                    TableName: DOCUMENTS_TABLE,
+                    Key: { id: documentId },
+                    UpdateExpression:
+                        'SET memos = list_append(if_not_exists(memos, :empty), :memo)',
+                    ExpressionAttributeValues: {
+                        ':empty': [],
+                        ':memo': [newMemo],
+                    },
                 })
             )
 
             return {
                 statusCode: 201,
                 headers: corsHeaders,
-                body: JSON.stringify(item),
+                body: JSON.stringify(newMemo),
             }
         }
 
         if (!memoId) {
-            return { statusCode: 400, body: 'memoId is required' }
+            return {
+                statusCode: 400,
+                headers: corsHeaders,
+                body: 'memoId is required',
+            }
         }
 
-        // ---------- PUT: メモ更新 ----------
+        // ----- 共通: Document 1件取得 -----
+        const getDocRes = await dynamoClient.send(
+            new GetCommand({
+                TableName: DOCUMENTS_TABLE,
+                Key: { id: documentId },
+            })
+        )
+
+        const docItem = getDocRes.Item as DocumentItem | undefined
+
+        if (!docItem) {
+            return {
+                statusCode: 404,
+                headers: corsHeaders,
+                body: 'Document not found',
+            }
+        }
+
+        const currentMemos: DocumentMemo[] = docItem.memos ?? []
+
+        // ----- PUT /documents/{id}/memos/{memoId} -----
         if (method === 'PUT') {
             const now = new Date().toISOString()
 
+            const updatedMemos: DocumentMemo[] = currentMemos.map((m) =>
+                m.memoId === memoId
+                    ? {
+                        ...m,
+                        text: body.text ?? m.text,
+                        updatedAt: now,
+                    }
+                    : m
+            )
+
+            const exists = updatedMemos.some((m) => m.memoId === memoId)
+            if (!exists) {
+                return {
+                    statusCode: 404,
+                    headers: corsHeaders,
+                    body: 'Memo not found',
+                }
+            }
+
             await dynamoClient.send(
                 new UpdateCommand({
-                    TableName: MEMO_TABLE,
-                    Key: { documentId, memoId },
-                    UpdateExpression:
-                        'SET #t = :t, updatedAt = :u',
-                    ExpressionAttributeNames: {
-                        '#t': 'text',
-                    },
+                    TableName: DOCUMENTS_TABLE,
+                    Key: { id: documentId },
+                    UpdateExpression: 'SET memos = :m',
                     ExpressionAttributeValues: {
-                        ':t': body.text ?? '',
-                        ':u': now,
+                        ':m': updatedMemos,
                     },
                 })
             )
 
-            return { statusCode: 204, headers: corsHeaders, body: '' }
+            return {
+                statusCode: 204,
+                headers: corsHeaders,
+                body: '',
+            }
         }
 
-        // ---------- DELETE: メモ削除 ----------
+        // ----- DELETE /documents/{id}/memos/{memoId} -----
         if (method === 'DELETE') {
+            const filteredMemos: DocumentMemo[] = currentMemos.filter(
+                (m) => m.memoId !== memoId
+            )
+
             await dynamoClient.send(
-                new DeleteCommand({
-                    TableName: MEMO_TABLE,
-                    Key: { documentId, memoId },
+                new UpdateCommand({
+                    TableName: DOCUMENTS_TABLE,
+                    Key: { id: documentId },
+                    UpdateExpression: 'SET memos = :m',
+                    ExpressionAttributeValues: {
+                        ':m': filteredMemos,
+                    },
                 })
             )
-            return { statusCode: 204, headers: corsHeaders, body: '' }
+
+            return {
+                statusCode: 204,
+                headers: corsHeaders,
+                body: '',
+            }
         }
 
-        return { statusCode: 405, body: 'Method Not Allowed' }
+        return {
+            statusCode: 405,
+            headers: corsHeaders,
+            body: 'Method Not Allowed',
+        }
     } catch (err) {
         console.error(err)
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'Internal Error' }),
+            headers: corsHeaders,
+            body: JSON.stringify({
+                error: 'Internal Error',
+                detail: String(err),
+            }),
         }
     }
 }
