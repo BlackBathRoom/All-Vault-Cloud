@@ -318,9 +318,9 @@ export function DocumentList() {
                             <TableHead className="w-[200px]">
                                 <button
                                     onClick={toggleSortOrder}
-                                    className="flex items-center gap-1.5 font-medium text-slate-700 hover:text-white transition-all duration-200 px-3 py-1.5 rounded"
+                                    className="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0"
                                 >
-                  受信日時
+                                    受信日時
                                     {sortOrder === 'none' && <ArrowUpDown className="size-3.5 text-slate-400" />}
                                     {sortOrder === 'asc' && <ArrowUp className="size-3.5 text-blue-600" />}
                                     {sortOrder === 'desc' && <ArrowDown className="size-3.5 text-blue-600" />}
