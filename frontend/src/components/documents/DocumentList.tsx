@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, FileText, Mail, Printer, X } from "lucide-react";
+import { Search, Filter, FileText, Mail, Printer, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -29,6 +29,7 @@ export function DocumentList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none'); // 受信日時のソート順
   const itemsPerPage = 8; // 1ページあたりの表示件数
 
   useEffect(() => {
@@ -103,13 +104,22 @@ export function DocumentList() {
     setCurrentPage(1); // フィルター変更時はページをリセット
   };
 
+  // 受信日時のソート切り替え
+  const toggleSortOrder = () => {
+    setSortOrder((prev) => {
+      if (prev === 'none') return 'desc'; // 最初は降順（新しい順）
+      if (prev === 'desc') return 'asc'; // 次は昇順（古い順）
+      return 'none'; // 最後はソート解除
+    });
+    setCurrentPage(1); // ソート変更時はページをリセット
+  };
+
   // フィルタ＆検索
-  const filteredDocuments = documents.filter((doc) => {
+  let filteredDocuments = documents.filter((doc) => {
     const matchesType = filterType === "all" || doc.type === filterType;
     const matchesSearch =
       searchQuery === "" ||
-      (doc.subject && doc.subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (doc.sender && doc.sender.toLowerCase().includes(searchQuery.toLowerCase()));
+      (doc.subject && doc.subject.toLowerCase().includes(searchQuery.toLowerCase()));
     
     // タグフィルター: 選択されたタグがない場合は全て表示
     // 選択されたタグがある場合は、ドキュメントのタグに含まれるものだけ表示
@@ -139,6 +149,15 @@ export function DocumentList() {
     
     return result;
   });
+
+  // 受信日時でソート
+  if (sortOrder !== 'none') {
+    filteredDocuments = [...filteredDocuments].sort((a, b) => {
+      const dateA = a.receivedAt ? new Date(a.receivedAt).getTime() : 0;
+      const dateB = b.receivedAt ? new Date(b.receivedAt).getTime() : 0;
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }
 
   // デバッグ情報
   console.log('📊 フィルタ状況:', { 
@@ -234,7 +253,7 @@ export function DocumentList() {
             <Search className="size-5 text-slate-600 flex-shrink-0" />
             <Input
               type="text"
-              placeholder="件名・送信者で検索..."
+              placeholder="件名で検索..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"
@@ -296,8 +315,17 @@ export function DocumentList() {
             <TableRow className="bg-slate-50">
               <TableHead className="w-[140px]">種別</TableHead>
               <TableHead>件名</TableHead>
-              <TableHead className="w-[200px]">送信者</TableHead>
-              <TableHead className="w-[180px]">受信日時</TableHead>
+              <TableHead className="w-[200px]">
+                <button
+                  onClick={toggleSortOrder}
+                  className="flex items-center gap-2 hover:text-slate-900 transition-colors"
+                >
+                  受信日時
+                  {sortOrder === 'none' && <ArrowUpDown className="size-4" />}
+                  {sortOrder === 'asc' && <ArrowUp className="size-4" />}
+                  {sortOrder === 'desc' && <ArrowDown className="size-4" />}
+                </button>
+              </TableHead>
               <TableHead className="w-[100px]">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -305,7 +333,7 @@ export function DocumentList() {
             {currentDocuments.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={4}
                   className="text-center py-12 text-slate-500"
                 >
                   <FileText className="size-12 mx-auto mb-3 text-slate-300" />
@@ -338,9 +366,6 @@ export function DocumentList() {
                   </TableCell>
                   <TableCell className="text-slate-900">
                     {doc.subject}
-                  </TableCell>
-                  <TableCell className="text-slate-700">
-                    {doc.sender}
                   </TableCell>
                   <TableCell className="text-slate-600">
                     {doc.receivedAt}
@@ -403,9 +428,6 @@ export function DocumentList() {
               </div>
               <h3 className="text-slate-900 mb-2">{doc.subject}</h3>
               <div className="space-y-1 text-sm">
-                <p className="text-slate-700">
-                  <span className="text-slate-500">送信者:</span> {doc.sender}
-                </p>
                 <p className="text-slate-600">
                   <span className="text-slate-500">受信日時:</span>{" "}
                   {doc.receivedAt}
