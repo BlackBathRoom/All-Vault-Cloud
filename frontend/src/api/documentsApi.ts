@@ -83,16 +83,12 @@ export const getDocuments = async (_type?: string): Promise<Document[]> => {
       return documents
     }
     
-    // 実際のS3 PDFファイル一覧APIを呼び出し
-    const response: { files: S3ApiFile[] } = await apiClient.get('/uploads/pdf')
-    const apiData: S3ApiFile[] = response.files
+    // DynamoDBからドキュメント一覧を取得（タグ情報含む）
+    const documents: Document[] = await apiClient.get('/documents')
     
-    console.log('📥 Lambda レスポンス:', apiData)
-    console.log('📊 取得ファイル数:', apiData.length)
-    
-    const documents = apiData.map(mapToDocument)
-    
-    console.log('✅ Document変換完了:', documents)
+    console.log('📥 Lambda レスポンス:', documents)
+    console.log('📊 取得ファイル数:', documents.length)
+    console.log('✅ Document取得完了')
     
     return documents
   } catch (error) {
