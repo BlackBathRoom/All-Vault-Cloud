@@ -1,108 +1,72 @@
+// frontend/src/api/documentsApi.ts
 import { apiClient } from './client'
 import { Document } from '../types/document'
 
-// Lambda（S3一覧API）から返ってくる生データの型
-type S3ApiFile = {
-  key: string
-  url: string
-  size: number | null
-  lastModified: string | null
+// ----------------------
+// API から返ってくる形
+// ----------------------
+type ApiDocument = {
+  id: string
+  type: 'fax' | 'email' | 'document'
+  subject: string
+  sender: string
+  receivedAt: string
+  s3Key: string
+  fileUrl: string | null
+  fileSize: number | null
 }
 
-// API のデータ → UI 用 Document に変換
-const mapToDocument = (item: S3ApiFile): Document => {
-    // ファイル名だけ抜き出し
-    const fileName = item.key.split('/').pop() ?? item.key
 
-    // 日付の整形
-    const receivedAt =
-    item.lastModified != null
-        ? new Date(item.lastModified).toLocaleString('ja-JP', {
-            timeZone: 'Asia/Tokyo',
-        })
-        : '(日時不明)'
-
-    return {
-        id: item.key,                 // 一意なIDとして S3キーを使う
-        type: 'fax',                  // PDF（FAX文書）として扱う
-        subject: fileName,            // 件名代わりにファイル名
-        sender: '(S3アップロード)',   // 送信者情報が無いので固定文言
-        receivedAt,                   // 整形済み日付
-        s3Key: item.key,              // ダウンロード等で使えるように保持
-        fileUrl: item.url,            // 署名付きダウンロードURL
-        fileSize: item.size,          // ファイルサイズ
-    }
+// メモ1件分
+export type DocumentMemo = {
+  memoId: string
+  text: string
+  page: number | null
+  createdAt: string
+  updatedAt: string
 }
 
-// 一覧取得：/documents は S3 の PDF一覧を返す Lambda に紐づいている
+// ----------------------
+// 文書一覧 GET /documents
+// ----------------------
+// ----------------------
+// 文書一覧 GET /documents
+// ----------------------
+// GET /documents → DynamoDB の Documents を取得
 export const getDocuments = async (): Promise<Document[]> => {
     try {
-        console.log('📡 S3 Lambda API 呼び出し開始...')
-    
-        // 🧪 モックデータでテスト（API Gateway未デプロイ対応）
-        const USE_MOCK_DATA = false // 実API有効時はfalseに変更 ✅ 実API使用中
-    
-        if (USE_MOCK_DATA) {
-            console.log('🧪 モックデータを使用中...')
-      
-            // モックのS3ファイルデータ
-            const mockApiData: S3ApiFile[] = [
-                {
-                    key: 'uploads/pdf/fax-001.pdf',
-                    url: 'https://example.com/mock-signed-url-1',
-                    size: 156789,
-                    lastModified: '2025-11-23T10:30:00.000Z'
-                },
-                {
-                    key: 'uploads/pdf/fax-002.pdf',
-                    url: 'https://example.com/mock-signed-url-2',
-                    size: 234567,
-                    lastModified: '2025-11-22T14:15:00.000Z'
-                },
-                {
-                    key: 'uploads/pdf/document-003.pdf',
-                    url: 'https://example.com/mock-signed-url-3',
-                    size: 345678,
-                    lastModified: '2025-11-21T09:45:00.000Z'
-                },
-                {
-                    key: 'uploads/pdf/scan-004.pdf',
-                    url: 'https://example.com/mock-signed-url-4',
-                    size: 123456,
-                    lastModified: '2025-11-20T16:20:00.000Z'
-                }
-            ]
-      
-            console.log('📥 モックレスポンス:', mockApiData)
-            console.log('📊 モックファイル数:', mockApiData.length)
-      
-            const documents = mockApiData.map(mapToDocument)
-      
-            console.log('✅ モックDocument変換完了:', documents)
-      
-            return documents
-        }
-    
-        // 実際のS3 PDFファイル一覧APIを呼び出し
-        const response: { files: S3ApiFile[] } = await apiClient.get('/uploads/pdf')
-        const apiData: S3ApiFile[] = response.files
-    
-        console.log('📥 Lambda レスポンス:', apiData)
-        console.log('📊 取得ファイル数:', apiData.length)
-    
-        const documents = apiData.map(mapToDocument)
-    
-        console.log('✅ Document変換完了:', documents)
-    
-        return documents
+        console.log('📡 Documents API 呼び出し開始...')
+  
+        const raw = await apiClient.get('/documents')
+        
+        console.log('📥 生レスポンス:', raw)
+  
+        // 配列でも、{ documents: [...] } でも OK にする
+        const apiDocs = Array.isArray(raw) ? raw : raw.documents ?? []
+  
+        console.log('📊 取得件数:', apiDocs.length)
+  
+        return apiDocs.map((d: ApiDocument): Document => ({
+            id: d.id,
+            type: d.type,
+            subject: d.subject,
+            sender: d.sender,
+            receivedAt: d.receivedAt,
+            s3Key: d.s3Key,
+            fileUrl: d.fileUrl ?? undefined,
+            fileSize: d.fileSize ?? undefined,
+        }))
     } catch (error) {
-        console.error('❌ S3 Lambda API エラー:', error)
-        throw new Error(`S3ファイルの取得に失敗しました: ${error}`)
+        console.error('❌ Documents API エラー:', error)
+        throw new Error(`文書一覧の取得に失敗しました: ${error}`)
     }
 }
+  
+  
 
-// 単一取得：バックエンドに /documents/{id} が無いので、
-// 一度一覧を取ってからフロント側で絞り込む方式にしておく
+// ----------------------
+// 単一取得（一覧から絞り込み）
+// ----------------------
 export const getDocumentById = async (id: string): Promise<Document> => {
     const documents = await getDocuments()
     const doc = documents.find((d) => d.id === id)
@@ -114,33 +78,27 @@ export const getDocumentById = async (id: string): Promise<Document> => {
     return doc
 }
 
-
-export type DocumentMemo = {
-    memoId: string
-    text: string
-    page: number | null
-    createdAt: string
-    updatedAt: string
-  }
-  
-  
+// ----------------------
 // メモ一覧 GET /documents/{id}/memos
+// ----------------------
 export const getDocumentMemos = async (
     documentId: string
 ): Promise<DocumentMemo[]> => {
     try {
-        const response = await apiClient.get(
+        const response = (await apiClient.get(
             `/documents/${documentId}/memos`
-        )
+        )) as DocumentMemo[]
+
         return response
     } catch (error) {
         console.error('❌ メモ一覧取得エラー:', error)
         throw new Error('メモ一覧の取得に失敗しました')
     }
 }
-  
-  
+
+// ----------------------
 // メモ作成 POST /documents/{id}/memos
+// ----------------------
 export const createDocumentMemo = async (
     documentId: string,
     input: { text: string; page?: number | null }
@@ -150,18 +108,15 @@ export const createDocumentMemo = async (
             text: input.text,
             page: input.page ?? null,
         }
-  
-        const response = await apiClient.post(
+
+        const response = (await apiClient.post(
             `/documents/${documentId}/memos`,
             payload
-        ) as DocumentMemo
-  
+        )) as DocumentMemo
+
         return response
     } catch (error) {
         console.error('❌ メモ作成エラー詳細:', error)
         throw new Error('メモの作成に失敗しました')
     }
 }
-  
-
-  
