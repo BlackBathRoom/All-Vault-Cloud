@@ -1,12 +1,14 @@
-import { Home, FileText, Upload, Menu } from 'lucide-react';
+import { Home, FileText, Upload, Menu, Search } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
 
 interface HeaderProps {
   onMenuClick: () => void;
+  onMagnifierToggle?: () => void;
+  isMagnifierActive?: boolean;
 }
 
-const Header = ({ onMenuClick }: HeaderProps) => {
+const Header = ({ onMenuClick, onMagnifierToggle, isMagnifierActive }: HeaderProps) => {
   return (
     <header className="h-16 bg-black border-b border-gray-800 flex items-center justify-between px-4 md:px-6">
       <div className="flex items-center gap-3 md:gap-6">
@@ -22,6 +24,21 @@ const Header = ({ onMenuClick }: HeaderProps) => {
       </div>
 
       <nav className="hidden md:flex items-center gap-2">
+        {onMagnifierToggle && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={onMagnifierToggle}
+            className={`${
+              isMagnifierActive 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-black text-white hover:bg-gray-800'
+            } hover:text-white`}
+            title="拡大鏡"
+          >
+            <Search className="w-5 h-5" />
+          </Button>
+        )}
         <Button asChild variant="ghost" className="gap-2 bg-black text-white hover:bg-gray-800 hover:text-white">
           <Link to="/">
             <Home className="w-4 h-4" />
