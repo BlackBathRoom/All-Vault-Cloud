@@ -1,13 +1,13 @@
 
-import React, { useState } from 'react';
-import Header from '../components/layout/Header';
-import Sidebar from '../components/layout/Sidebar';
-import { DocumentList } from '../components/documents/DocumentList.tsx';
+import React, { useState } from 'react'
+import Header from '../components/layout/Header'
+import Sidebar from '../components/layout/Sidebar'
+import { DocumentList } from '../components/documents/DocumentList.tsx'
 
 
 const DocumentsPage: React.FC = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [currentView, setCurrentView] = useState('documents');
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [currentView, setCurrentView] = useState('documents')
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
@@ -31,7 +31,7 @@ const DocumentsPage: React.FC = () => {
                 </div>
             </main>
         </div>
-    );
+    )
 }
 
 export default DocumentsPage

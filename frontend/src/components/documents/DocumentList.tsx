@@ -100,7 +100,9 @@ export function DocumentList() {
                 console.log('✅ データセット完了. documents.length:', data.length)
                 setLoading(false)
             } catch (error) {
+
                 console.error('❌ API読み込みエラー:', error)
+
                 setLoading(false)
             }
         }
@@ -123,6 +125,7 @@ export function DocumentList() {
             fax: {
                 label: 'FAX',
                 className:
+
                     'bg-green-100 text-green-700 border-green-200 hover:bg-green-100',
             },
             email: {
@@ -261,7 +264,6 @@ export function DocumentList() {
         setCurrentPage(1)
     }, [filterType, searchQuery])
 
-    // ローディング表示
     if (loading) {
         return (
             <div className="py-10 text-center text-slate-600">
@@ -271,6 +273,7 @@ export function DocumentList() {
     }
 
     return (
+
         <div className="space-y-4 md:space-y-6 max-w-full overflow-hidden">
             {/* Page Title */}
             <div>
@@ -353,6 +356,7 @@ export function DocumentList() {
             </div>
 
             {/* Results Count */}
+
             <div className="text-xs md:text-sm text-slate-600 px-1">
                 {filteredDocuments.length}件の文書が見つかりました
                 {totalPages > 1 && (

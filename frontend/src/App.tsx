@@ -1,25 +1,25 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 
 
-import HomePage from './pages/HomePage.tsx';
-import DocumentsPage from './pages/DocumentsPage.tsx';
-import FaxUploadPage from './pages/FaxUploadPage.tsx';
-import LoginPage from './pages/LoginPage.tsx';
-import NewaccountPage from './pages/NewaccountPage.tsx';
-import { useLocation } from 'react-router-dom';
-import { Footer } from './components/layout/Footer';
+import HomePage from './pages/HomePage.tsx'
+import DocumentsPage from './pages/DocumentsPage.tsx'
+import FaxUploadPage from './pages/FaxUploadPage.tsx'
+import LoginPage from './pages/LoginPage.tsx'
+import NewaccountPage from './pages/NewaccountPage.tsx'
+import { useLocation } from 'react-router-dom'
+import { Footer } from './components/layout/Footer'
 
 function App() {
     return (
         <Router>
             <AppContent />
         </Router>
-    );
+    )
 }
 
 function AppContent() {
-    const location = useLocation();
-    const isAuthPage = location.pathname === '/login' || location.pathname === '/newaccount';
+    const location = useLocation()
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/newaccount'
     return isAuthPage ? (
         <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -38,7 +38,7 @@ function AppContent() {
             </div>
             <Footer />
         </div>
-    );
+    )
 }
 
 export default App

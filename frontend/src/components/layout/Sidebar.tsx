@@ -1,8 +1,8 @@
-import { LayoutDashboard, FileText, Upload, X, Search } from 'lucide-react';
-import { cn } from '../ui/utils';
-import { Button } from '../ui/button';
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState } from 'react'
+import { LayoutDashboard, FileText, Upload, X, Type } from 'lucide-react'
+import { cn } from '../ui/utils'
+import { Button } from '../ui/button'
+import { Link } from 'react-router-dom'
 
 interface SidebarProps {
   currentView: string;
@@ -43,15 +43,15 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
     },
   ];
 
-  return (
-    <>
-      {/* オーバーレイ */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={onClose}
-        />
-      )}
+    return (
+        <>
+            {/* オーバーレイ */}
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-40"
+                    onClick={onClose}
+                />
+            )}
       
       {/* サイドバー */}
       <aside className={cn(
@@ -106,7 +106,7 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Search className="w-4 h-4 flex-shrink-0" />
+                <Type className="w-4 h-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">文字サイズ</span>
               </span>
               <span className="text-sm font-bold text-blue-600 whitespace-nowrap">{fontSize}%</span>
@@ -139,4 +139,4 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
   );
 };
 
-export default Sidebar;
+export default Sidebar

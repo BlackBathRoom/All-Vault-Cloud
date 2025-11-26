@@ -169,8 +169,8 @@ const FaxUploadForm: React.FC = () => {
                         isDragging
                             ? 'border-blue-400 bg-blue-50'
                             : selectedFile
-                            ? 'border-gray-300 bg-white'
-                            : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                                ? 'border-gray-300 bg-white'
+                                : 'border-gray-300 hover:border-gray-400 bg-gray-50'
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -330,8 +330,8 @@ const FaxUploadForm: React.FC = () => {
                             uploadStatus === 'success' 
                                 ? 'bg-green-50 text-green-700 border border-green-200'
                                 : uploadStatus === 'error'
-                                ? 'bg-red-50 text-red-700 border border-red-200'
-                                : 'bg-slate-50 text-slate-700 border border-slate-200'
+                                    ? 'bg-red-50 text-red-700 border border-red-200'
+                                    : 'bg-slate-50 text-slate-700 border border-slate-200'
                         }`}>
                             {message}
                         </div>

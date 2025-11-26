@@ -1,6 +1,6 @@
-import { Home, FileText, Upload, Menu } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Link } from 'react-router-dom';
+import { Home, FileText, Upload, Menu } from 'lucide-react'
+import { Button } from '../ui/button'
+import { Link } from 'react-router-dom'
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -45,4 +45,4 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   );
 };
 
-export default Header;
+export default Header

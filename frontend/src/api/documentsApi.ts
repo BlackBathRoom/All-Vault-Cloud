@@ -1,78 +1,146 @@
 import { apiClient } from './client'
 import type { Document } from '../types/document'
-
-/**
- * バックエンド（/documents API）から返ってくる文書データの型
- * README のサンプルに合わせた最小限の定義だけを持っています。
- */
-type BackendDocument = {
+// ----------------------
+// APIレスポンス型
+// ----------------------
+export type ApiDocument = {
   id: string
-  type?: 'fax' | 'email' | 'document'
-  subject?: string | null
-  sender?: string | null
-  receivedAt?: string | null
-  createdAt?: string | null
-  s3Key?: string
-  extractedText?: string
-  metadata?: Record<string, unknown>
-  tags?: string[]
-  folder?: string
+  type: 'fax' | 'email' | 'document'
+  subject: string
+  sender: string
+  receivedAt: string
+  s3Key: string
+  fileUrl: string | null
+  fileSize: number | null
+  latestMemo: {
+    text: string
+    updatedAt: string
+  } | null
 }
 
-/**
- * API の生データ → フロントエンド用 Document 型 に変換
- */
-const mapToDocument = (item: BackendDocument): Document => {
-  const receivedAt = item.receivedAt ?? item.createdAt ?? ''
+export type DocumentsResponse =
+  | ApiDocument[]
+  | { documents: ApiDocument[] }
 
-  // type が未知の場合は 'document' として扱う
-  const docType: Document['type'] =
-    item.type === 'fax' || item.type === 'email' ? item.type : 'document'
-
-  return {
-    id: item.id,
-    type: docType,
-    subject: item.subject ?? '',
-    sender: item.sender ?? '',
-    receivedAt,
-    s3Key: item.s3Key,
-    extractedText: item.extractedText,
-    metadata: item.metadata,
-    tags: item.tags,
-    folder: item.folder,
-  }
+// メモ1件
+export type DocumentMemo = {
+  memoId: string
+  text: string
+  page: number | null
+  createdAt: string
+  updatedAt: string
 }
 
-/**
- * 文書一覧取得
- * バックエンドの GET /documents を叩いて、必要に応じて type でフィルタします。
- *
- * @param type - 例: 'fax', 'email', 'email_body', 'email_attachment' など
- */
-export const getDocuments = async (type?: string): Promise<Document[]> => {
-  const endpoint = type ? `/documents?type=${encodeURIComponent(type)}` : '/documents'
+// -------------------------------------
+// axios / fetch 両方に対応する unwrap
+// -------------------------------------
+function unwrapData<T>(response: unknown): T {
+// axios の場合 → { data: ... }
+    if (
+        typeof response === 'object' &&
+    response !== null &&
+    'data' in response
+    ) {
+        return (response as { data: T }).data
+    }
 
-  const response = await apiClient.get(endpoint)
-
-  if (!Array.isArray(response)) {
-    throw new Error('Invalid response format: documents list must be an array')
-  }
-
-  return response.map((item) => mapToDocument(item as BackendDocument))
+    // fetch ラップ or 生 JSON の場合
+    return response as T
 }
 
-/**
- * 単一文書取得
- * まだバックエンドの /documents/{id} を直接は使わず、
- * 一度一覧を取ってからフロント側で絞り込む方式にしておきます。
- */
-export const getDocumentById = async (id: string): Promise<Document> => {
-  const documents = await getDocuments()
-  const doc = documents.find((d) => d.id === id)
+// -------------------------------------
+// 空メモ判定（ここは必ず getDocuments より上に置く）
+// -------------------------------------
+const isEmptyText = (text: string | null | undefined): boolean => {
+    return !text || text.trim() === ''
+}
 
-  if (!doc) {
-    throw new Error(`Document not found for id: ${id}`)
-  }
+// ----------------------
+// 文書一覧 GET /documents
+// ----------------------
+export const getDocuments = async (): Promise<Document[]> => {
+    try {
+        const response = await apiClient.get('/documents')
 
-  return doc
+        // axios 形式でも fetch 形式でも正しく取れる
+        const raw = unwrapData<DocumentsResponse>(response)
+
+        const apiDocs = Array.isArray(raw)
+            ? raw
+            : raw.documents ?? []
+
+        return apiDocs.map((d): Document => ({
+            id: d.id,
+            type: d.type,
+            subject: d.subject,
+            sender: d.sender,
+            receivedAt: d.receivedAt,
+            s3Key: d.s3Key,
+            fileUrl: d.fileUrl ?? undefined,
+            fileSize: d.fileSize ?? undefined,
+
+            // 空メモは null 扱いにする
+            latestMemo:
+            d.latestMemo && !isEmptyText(d.latestMemo.text)
+                ? d.latestMemo
+                : null,
+        }))
+    } catch (error) {
+        console.error('❌ Documents API エラー:', error)
+        throw new Error('文書一覧の取得に失敗しました')
+    }
+}
+
+// ----------------------
+// メモ一覧 GET /documents/{id}/memos
+// ----------------------
+export const getDocumentMemos = async (
+    documentId: string
+): Promise<DocumentMemo[]> => {
+    const response = await apiClient.get(
+        `/documents/${documentId}/memos`
+    )
+
+    const memos = unwrapData<DocumentMemo[]>(response)
+
+    // 空メモ（一切の文字なし）は除外する
+    return memos.filter((m) => !isEmptyText(m.text))
+}
+
+// ----------------------
+// メモ作成 POST /documents/{id}/memos
+// ----------------------
+export const createDocumentMemo = async (
+    documentId: string,
+    input: { text: string; page?: number | null }
+): Promise<DocumentMemo> => {
+    const payload = {
+        text: input.text,
+        page: input.page ?? null,
+    }
+
+    const response = await apiClient.post(
+        `/documents/${documentId}/memos`,
+        payload
+    )
+
+    return unwrapData<DocumentMemo>(response)
+}
+
+// ----------------------
+// メモ削除 POST /documents/{id}/memos (mode: delete)
+// ----------------------
+export const deleteDocumentMemo = async (
+    documentId: string,
+    memoId: string
+): Promise<void> => {
+    try {
+        await apiClient.post(`/documents/${documentId}/memos`, {
+            mode: 'delete',
+            memoId,
+        })
+    } catch (error) {
+        console.error('❌ メモ削除エラー:', error)
+        throw new Error('メモの削除に失敗しました')
+    }
 }

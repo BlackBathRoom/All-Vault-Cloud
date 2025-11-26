@@ -16,6 +16,12 @@ export interface Document {
     folder?: string              // フォルダ名 "請求書", "注文書", "契約書"
     category?: DocumentCategory  // 自動分類カテゴリ
     classificationConfidence?: number  // AI分類の信頼度 0-1
+    
+    // メモ機能
+    latestMemo?: {
+        text: string
+        updatedAt: string
+    } | null
 }
 
 // ドキュメントカテゴリの定義

@@ -1,13 +1,13 @@
 
-import React, { useState } from 'react';
-import Header from '../components/layout/Header';
-import Sidebar from '../components/layout/Sidebar';
-import FaxUploadForm from '../components/fax/FaxUploadForm.tsx';
+import React, { useState } from 'react'
+import Header from '../components/layout/Header'
+import Sidebar from '../components/layout/Sidebar'
+import FaxUploadForm from '../components/fax/FaxUploadForm.tsx'
 
 
 const FaxUploadPage: React.FC = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [currentView, setCurrentView] = useState('fax-upload');
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [currentView, setCurrentView] = useState('fax-upload')
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
@@ -31,7 +31,7 @@ const FaxUploadPage: React.FC = () => {
                 </div>
             </main>
         </div>
-    );
+    )
 }
 
 export default FaxUploadPage
