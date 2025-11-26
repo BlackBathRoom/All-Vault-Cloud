@@ -20,7 +20,7 @@ export interface Document {
     // メモ機能
     latestMemo?: {
         text: string
-        createdAt: string
+        updatedAt: string
     } | null
 }
 
