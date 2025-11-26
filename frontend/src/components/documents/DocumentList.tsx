@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Search, Filter, FileText, Mail, Printer, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import {
+  Search,
+  Filter,
+  FileText,
+  Mail,
+  Printer,
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import {
@@ -19,41 +29,46 @@ import {
 } from '../ui/table'
 import { Badge } from '../ui/badge'
 import { getDocuments } from '../../api/documentsApi'
-import { Document, TAG_LABELS, PREDEFINED_TAGS, type PredefinedTag } from '../../types/document'
+import {
+  Document,
+  TAG_LABELS,
+  PREDEFINED_TAGS,
+  type PredefinedTag,
+} from '../../types/document'
 
-export function DocumentList() {
-  // ✅ 追加: UUID_ファイル名（やパス付き）から「表示用のファイル名だけ」を取り出す関数
-  const getDisplaySubject = (subject?: string): string => {
-    if (!subject) return ''
+// ✅ UUID_ファイル名（やパス付き）から表示用のファイル名だけを取り出す関数
+const getDisplaySubject = (subject?: string): string => {
+  if (!subject) return ''
 
-    // もし "uploads/raw/UUID_サンプルtest" のようにパスが付いていたら最後の "/" 以降だけにする
-    const lastSlashIndex = subject.lastIndexOf('/')
-    const filenamePart =
-      lastSlashIndex >= 0 ? subject.slice(lastSlashIndex + 1) : subject
+  // もし "uploads/raw/UUID_サンプルtest" のようにパスが付いていたら最後の "/" 以降だけにする
+  const lastSlashIndex = subject.lastIndexOf('/')
+  const filenamePart =
+    lastSlashIndex >= 0 ? subject.slice(lastSlashIndex + 1) : subject
 
-    // 先頭の "UUID_" を取り除く
-    const underscoreIndex = filenamePart.indexOf('_')
-    if (underscoreIndex === -1) {
-      // "_" がなければそのまま件名として扱う
-      return filenamePart
-    }
-
-    const prefix = filenamePart.slice(0, underscoreIndex)
-    const rest = filenamePart.slice(underscoreIndex + 1)
-
-    // UUID 形式かどうかチェック（8-4-4-4-12 の16進数）
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-    if (uuidRegex.test(prefix)) {
-      // "UUID_..." 形式なら "_" 以降だけを表示用件名として返す
-      return rest
-    }
-
-    // それ以外（普通の件名）はそのまま
+  // 先頭の "UUID_" を取り除く
+  const underscoreIndex = filenamePart.indexOf('_')
+  if (underscoreIndex === -1) {
+    // "_" がなければそのまま件名として扱う
     return filenamePart
   }
 
+  const prefix = filenamePart.slice(0, underscoreIndex)
+  const rest = filenamePart.slice(underscoreIndex + 1)
+
+  // UUID 形式かどうかチェック（8-4-4-4-12 の16進数）
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  if (uuidRegex.test(prefix)) {
+    // "UUID_..." 形式なら "_" 以降だけを表示用件名として返す
+    return rest
+  }
+
+  // それ以外（普通の件名）はそのまま
+  return filenamePart
+}
+
+export function DocumentList() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -75,7 +90,10 @@ export function DocumentList() {
         // タグ情報のデバッグ
         data.forEach((doc, idx) => {
           if (doc.tags) {
-            console.log(`📌 Doc ${idx}: ${doc.subject} has tags:`, doc.tags)
+            console.log(
+              `📌 Doc ${idx}: ${doc.subject} has tags:`,
+              doc.tags,
+            )
           }
         })
         setDocuments(data)
@@ -131,14 +149,14 @@ export function DocumentList() {
   // タグフィルターのトグル
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag],
     )
     setCurrentPage(1) // フィルター変更時はページをリセット
   }
 
   // 受信日時のソート切り替え
   const toggleSortOrder = () => {
-    setSortOrder((prev) => {
+    setSortOrder(prev => {
       if (prev === 'none') return 'desc' // 最初は降順（新しい順）
       if (prev === 'desc') return 'asc' // 次は昇順（古い順）
       return 'none' // 最後はソート解除
@@ -147,7 +165,7 @@ export function DocumentList() {
   }
 
   // フィルタ＆検索
-  let filteredDocuments = documents.filter((doc) => {
+  let filteredDocuments = documents.filter(doc => {
     const matchesType = filterType === 'all' || doc.type === filterType
 
     // ✅ 検索対象も UUID を削った「表示用件名」で行う
@@ -156,15 +174,14 @@ export function DocumentList() {
       searchQuery === '' ||
       displaySubject.toLowerCase().includes(searchQuery.toLowerCase())
 
-    // タグフィルター: 選択されたタグがない場合は全て表示
-    // 選択されたタグがある場合は、ドキュメントのタグに含まれるものだけ表示
+    // タグフィルター
     let matchesTags = true
     if (selectedTags.length > 0) {
       if (!doc.tags || !Array.isArray(doc.tags) || doc.tags.length === 0) {
         matchesTags = false
       } else {
         matchesTags = selectedTags.some(selectedTag =>
-          (doc.tags?.some(docTag => docTag === selectedTag)) ?? false
+          (doc.tags?.some(docTag => docTag === selectedTag)) ?? false,
         )
       }
     }
@@ -179,7 +196,7 @@ export function DocumentList() {
         docTags: doc.tags,
         selectedTags,
         matchesTags,
-        result
+        result,
       })
     }
 
@@ -200,14 +217,17 @@ export function DocumentList() {
     documents: documents.length,
     selectedTags,
     selectedTagsDetail: selectedTags.map(t => `"${t}"`),
-    documentsWithTags: documents.filter(d => d.tags && d.tags.length > 0).length,
-    sampleDocTags: documents.filter(d => d.tags && d.tags.length > 0).map(d => ({
-      subject: d.subject,
-      tags: d.tags
-    })),
+    documentsWithTags: documents.filter(d => d.tags && d.tags.length > 0)
+      .length,
+    sampleDocTags: documents
+      .filter(d => d.tags && d.tags.length > 0)
+      .map(d => ({
+        subject: d.subject,
+        tags: d.tags,
+      })),
     filterType,
     searchQuery,
-    filteredDocuments: filteredDocuments.length
+    filteredDocuments: filteredDocuments.length,
   })
 
   // ファイルダウンロード処理
@@ -227,7 +247,10 @@ export function DocumentList() {
     if (!bytes || bytes === 0) return '-'
     const sizes = ['B', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(1024))
-    return `${Math.round(bytes / Math.pow(1024, i) * 100) / 100} ${sizes[i]}`
+    return (
+      `${Math.round((bytes / Math.pow(1024, i)) * 100) / 100} ${sizes[i]}` ??
+      '-'
+    )
   }
 
   // ページネーション計算
@@ -241,7 +264,7 @@ export function DocumentList() {
     setCurrentPage(1)
   }, [filterType, searchQuery])
 
-  // ローディング・エラー表示
+  // ローディング表示
   if (loading) {
     return (
       <div className="py-10 text-center text-slate-600">
@@ -251,22 +274,22 @@ export function DocumentList() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4 md:space-y-6 max-w-full overflow-hidden">
       {/* Page Title */}
       <div>
-        <h2 className="text-xl md:text-2xl text-slate-900">文書一覧</h2>
-        <p className="text-sm md:text-base text-slate-600 mt-1">
+        <h2 className="text-base md:text-xl text-slate-900">文書一覧</h2>
+        <p className="text-xs md:text-sm text-slate-600 mt-1">
           受信した文書を管理・閲覧できます
         </p>
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 md:p-6">
-        <div className="flex flex-col gap-4">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3 md:p-4">
+        <div className="flex flex-col gap-3">
           {/* Type Filter */}
-          <div className="flex items-center gap-3">
-            <Filter className="size-5 text-slate-600 flex-shrink-0" />
-            <label className="text-slate-700 min-w-fit text-sm md:text-base">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-600 flex-shrink-0" />
+            <label className="text-slate-700 min-w-fit text-xs md:text-sm">
               種別:
             </label>
             <Select value={filterType} onValueChange={setFilterType}>
@@ -284,23 +307,23 @@ export function DocumentList() {
 
           {/* Search */}
           <div className="flex items-center gap-2">
-            <Search className="size-5 text-slate-600 flex-shrink-0" />
+            <Search className="w-4 h-4 text-slate-600 flex-shrink-0" />
             <Input
               type="text"
               placeholder="件名で検索..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
+              onChange={e => setSearchQuery(e.target.value)}
+              className="flex-1 text-sm"
             />
           </div>
 
           {/* Tag Filter */}
           <div className="flex flex-col gap-2">
-            <label className="text-slate-700 text-sm md:text-base">
+            <label className="text-slate-700 text-xs md:text-sm">
               タグでフィルター:
             </label>
             <div className="flex flex-wrap gap-2">
-              {PREDEFINED_TAGS.map((tag) => (
+              {PREDEFINED_TAGS.map(tag => (
                 <Badge
                   key={tag}
                   variant="outline"
@@ -333,7 +356,7 @@ export function DocumentList() {
       </div>
 
       {/* Results Count */}
-      <div className="text-sm md:text-base text-slate-600 px-1">
+      <div className="text-xs md:text-sm text-slate-600 px-1">
         {filteredDocuments.length}件の文書が見つかりました
         {totalPages > 1 && (
           <span className="ml-2">
@@ -344,82 +367,113 @@ export function DocumentList() {
 
       {/* Document Table - Desktop */}
       <div className="hidden md:block bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="w-[140px]">種別</TableHead>
-              <TableHead>件名</TableHead>
-              <TableHead className="w-[200px]">
-                <button
-                  onClick={toggleSortOrder}
-                  className="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0"
-                >
-                  受信日時
-                  {sortOrder === 'none' && <ArrowUpDown className="size-3.5 text-slate-400" />}
-                  {sortOrder === 'asc' && <ArrowUp className="size-3.5 text-blue-600" />}
-                  {sortOrder === 'desc' && <ArrowDown className="size-3.5 text-blue-600" />}
-                </button>
-              </TableHead>
-              <TableHead className="w-[100px]">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentDocuments.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center py-12 text-slate-500"
-                >
-                  <FileText className="size-12 mx-auto mb-3 text-slate-300" />
-                  <p>該当する文書が見つかりませんでした</p>
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <colgroup>
+              <col style={{ width: '8rem' }} />
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: '10rem' }} />
+              <col style={{ width: '5rem' }} />
+            </colgroup>
+            <TableHeader className="sticky top-0 z-10 bg-slate-50">
+              <TableRow className="bg-slate-50 text-xs">
+                <TableHead className="bg-slate-50 py-2 px-3 text-xs">
+                  種別
+                </TableHead>
+                <TableHead className="bg-slate-50 py-2 px-3 text-xs">
+                  件名
+                </TableHead>
+                <TableHead className="bg-slate-50 py-2 px-3 text-xs">
+                  <button
+                    onClick={toggleSortOrder}
+                    className="flex items-center gap-1 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0 text-xs"
+                  >
+                    受信日時
+                    {sortOrder === 'none' && (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    )}
+                    {sortOrder === 'asc' && (
+                      <ArrowUp className="w-3 h-3 text-blue-600" />
+                    )}
+                    {sortOrder === 'desc' && (
+                      <ArrowDown className="w-3 h-3 text-blue-600" />
+                    )}
+                  </button>
+                </TableHead>
+                <TableHead className="bg-slate-50 py-2 px-3 text-xs">
+                  操作
+                </TableHead>
               </TableRow>
-            ) : (
-              currentDocuments.map((doc) => (
-                <TableRow
-                  key={doc.id}
-                  className="hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <TableCell>
-                    <div className="flex flex-col gap-2">
-                      {getTypeBadge(doc.type)}
-                      {doc.tags && doc.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {doc.tags.map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="outline"
-                              className="text-xs bg-orange-50 text-orange-700 border-orange-200"
-                            >
-                              {TAG_LABELS[tag as PredefinedTag] || tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-slate-900">
-                    {/* ✅ ここもファイル名だけ表示 */}
-                    {getDisplaySubject(doc.subject)}
-                  </TableCell>
-                  <TableCell className="text-slate-600">
-                    {doc.receivedAt}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(doc)}
-                      disabled={!doc.fileUrl}
-                    >
-                      開く
-                    </Button>
+            </TableHeader>
+          </Table>
+        </div>
+        <div className="overflow-y-auto" style={{ maxHeight: '30rem' }}>
+          <Table>
+            <colgroup>
+              <col style={{ width: '8rem' }} />
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: '10rem' }} />
+              <col style={{ width: '5rem' }} />
+            </colgroup>
+            <TableBody>
+              {currentDocuments.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center py-12 text-slate-500"
+                  >
+                    <FileText className="size-12 mx-auto mb-3 text-slate-300" />
+                    <p>該当する文書が見つかりませんでした</p>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                currentDocuments.map(doc => (
+                  <TableRow
+                    key={doc.id}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <TableCell className="py-2 px-3">
+                      <div className="flex flex-col gap-1.5">
+                        {getTypeBadge(doc.type)}
+                        {doc.tags && doc.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {doc.tags.map(tag => (
+                              <Badge
+                                key={tag}
+                                variant="outline"
+                                className="text-[0.65rem] py-0 px-1.5 bg-orange-50 text-orange-700 border-orange-200"
+                              >
+                                {TAG_LABELS[tag as PredefinedTag] || tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-slate-900 py-2 px-3 text-xs">
+                      {/* ✅ ファイル名だけ表示 */}
+                      {getDisplaySubject(doc.subject)}
+                    </TableCell>
+                    <TableCell className="text-slate-600 py-2 px-3 text-xs">
+                      {doc.receivedAt}
+                    </TableCell>
+                    <TableCell className="py-2 px-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownload(doc)}
+                        disabled={!doc.fileUrl}
+                        className="text-xs py-1 px-2 h-auto"
+                      >
+                        開く
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Document Cards - Mobile */}
@@ -430,7 +484,7 @@ export function DocumentList() {
             <p>該当する文書が見つかりませんでした</p>
           </div>
         ) : (
-          currentDocuments.map((doc) => (
+          currentDocuments.map(doc => (
             <div
               key={doc.id}
               className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 active:bg-slate-50 transition-colors"
@@ -440,7 +494,7 @@ export function DocumentList() {
                   {getTypeBadge(doc.type)}
                   {doc.tags && doc.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {doc.tags.map((tag) => (
+                      {doc.tags.map(tag => (
                         <Badge
                           key={tag}
                           variant="outline"
@@ -484,34 +538,36 @@ export function DocumentList() {
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex justify中心 items-center gap-4 mt-6">
+        <div className="flex justify-center items-center gap-2 md:gap-4 mt-6">
           <Button
             variant="outline"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            onClick={() =>
+              setCurrentPage(prev => Math.max(prev - 1, 1))
+            }
             disabled={currentPage === 1}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
+            className="flex items-center gap-1 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 text-xs py-1.5 px-3"
           >
             ← 前へ
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {Array.from({ length: totalPages }, (_, i) => i + 1)
               .filter(
-                (page) =>
+                page =>
                   page === 1 ||
                   page === totalPages ||
-                  Math.abs(page - currentPage) <= 1
+                  Math.abs(page - currentPage) <= 1,
               )
               .map((page, index, array) => (
-                <div key={page} className="flex items-center gap-2">
+                <div key={page} className="flex items-center gap-1.5">
                   {index > 0 && array[index - 1] !== page - 1 && (
-                    <span className="text-slate-400">...</span>
+                    <span className="text-slate-400 text-xs">...</span>
                   )}
                   <Button
                     variant={currentPage === page ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className={`min-w-[2.5rem] ${
+                    className={`min-w-[2rem] text-xs py-1.5 px-2 ${
                       currentPage === page
                         ? 'bg-slate-700 hover:bg-slate-800 text-white border-slate-700'
                         : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
@@ -526,10 +582,10 @@ export function DocumentList() {
           <Button
             variant="outline"
             onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              setCurrentPage(prev => Math.min(prev + 1, totalPages))
             }
             disabled={currentPage === totalPages}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
+            className="flex items-center gap-1 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 text-xs py-1.5 px-3"
           >
             次へ →
           </Button>
