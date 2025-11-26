@@ -23,10 +23,14 @@ export function Magnifier({ isActive }: MagnifierProps) {
         const captureScreen = async () => {
             try {
                 const canvas = await html2canvas(document.body, {
-                    scale: 1,
+                    scale: window.devicePixelRatio || 1,
                     useCORS: true,
                     logging: false,
                     allowTaint: true,
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    scrollX: 0,
+                    scrollY: 0,
                 })
                 setScreenshot(canvas.toDataURL())
             } catch (error) {
@@ -75,12 +79,13 @@ export function Magnifier({ isActive }: MagnifierProps) {
 
         const img = new Image()
         img.onload = () => {
-            const sourceSize = 60
+            const dpr = window.devicePixelRatio || 1
+            const sourceSize = 60 * dpr
             const destSize = 200
 
-            // 取得元の座標（画面座標をスクリーンショット座標に変換）
-            const sourceX = Math.max(0, position.x - sourceSize / 2)
-            const sourceY = Math.max(0, position.y - sourceSize / 2)
+            // 取得元の座標（デバイスピクセル比を考慮）
+            const sourceX = Math.max(0, position.x * dpr - sourceSize / 2)
+            const sourceY = Math.max(0, position.y * dpr - sourceSize / 2)
 
             // キャンバスをクリア
             ctx.clearRect(0, 0, destSize, destSize)
