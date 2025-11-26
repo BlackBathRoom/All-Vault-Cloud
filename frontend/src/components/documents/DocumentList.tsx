@@ -30,7 +30,7 @@ export function DocumentList() {
     const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [currentPage, setCurrentPage] = useState(1)
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none') // 受信日時のソート順
-    const itemsPerPage = 8 // 1ページあたりの表示件数
+    const itemsPerPage = 20 // 1ページあたりの表示件数
 
     useEffect(() => {
         const load = async () => {
@@ -310,81 +310,93 @@ export function DocumentList() {
 
             {/* Document Table - Desktop */}
             <div className="hidden md:block bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-slate-50">
-                            <TableHead className="w-[140px]">種別</TableHead>
-                            <TableHead>件名</TableHead>
-                            <TableHead className="w-[200px]">
-                                <button
-                                    onClick={toggleSortOrder}
-                                    className="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0"
-                                >
-                                    受信日時
-                                    {sortOrder === 'none' && <ArrowUpDown className="size-3.5 text-slate-400" />}
-                                    {sortOrder === 'asc' && <ArrowUp className="size-3.5 text-blue-600" />}
-                                    {sortOrder === 'desc' && <ArrowDown className="size-3.5 text-blue-600" />}
-                                </button>
-                            </TableHead>
-                            <TableHead className="w-[100px]">操作</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {currentDocuments.length === 0 ? (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={4}
-                                    className="text-center py-12 text-slate-500"
-                                >
-                                    <FileText className="size-12 mx-auto mb-3 text-slate-300" />
-                                    <p>該当する文書が見つかりませんでした</p>
-                                </TableCell>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="sticky top-0 z-10 bg-slate-50">
+                            <TableRow className="bg-slate-50">
+                                <TableHead className="w-[140px] bg-slate-50">種別</TableHead>
+                                <TableHead className="bg-slate-50">件名</TableHead>
+                                <TableHead className="w-[200px] bg-slate-50">
+                                    <button
+                                        onClick={toggleSortOrder}
+                                        className="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0"
+                                    >
+                                        受信日時
+                                        {sortOrder === 'none' && <ArrowUpDown className="size-3.5 text-slate-400" />}
+                                        {sortOrder === 'asc' && <ArrowUp className="size-3.5 text-blue-600" />}
+                                        {sortOrder === 'desc' && <ArrowDown className="size-3.5 text-blue-600" />}
+                                    </button>
+                                </TableHead>
+                                <TableHead className="w-[100px] bg-slate-50">操作</TableHead>
                             </TableRow>
-                        ) : (
-                            currentDocuments.map((doc) => (
-                                <TableRow
-                                    key={doc.id}
-                                    className="hover:bg-slate-50 transition-colors cursor-pointer"
-                                >
-                                    <TableCell>
-                                        <div className="flex flex-col gap-2">
-                                            {getTypeBadge(doc.type)}
-                                            {doc.tags && doc.tags.length > 0 && (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {doc.tags.map((tag) => (
-                                                        <Badge
-                                                            key={tag}
-                                                            variant="outline"
-                                                            className="text-xs bg-orange-50 text-orange-700 border-orange-200"
-                                                        >
-                                                            {TAG_LABELS[tag as PredefinedTag] || tag}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-slate-900">
-                                        {doc.subject}
-                                    </TableCell>
-                                    <TableCell className="text-slate-600">
-                                        {doc.receivedAt}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            onClick={() => handleDownload(doc)}
-                                            disabled={!doc.fileUrl}
-                                        >
-                      開く
-                                        </Button>
+                        </TableHeader>
+                    </Table>
+                </div>
+                <div className="overflow-y-auto" style={{maxHeight: '600px'}}>
+                    <Table>
+                        <colgroup>
+                            <col style={{width: '140px'}} />
+                            <col />
+                            <col style={{width: '200px'}} />
+                            <col style={{width: '100px'}} />
+                        </colgroup>
+                        <TableBody>
+                            {currentDocuments.length === 0 ? (
+                                <TableRow>
+                                    <TableCell
+                                        colSpan={4}
+                                        className="text-center py-12 text-slate-500"
+                                    >
+                                        <FileText className="size-12 mx-auto mb-3 text-slate-300" />
+                                        <p>該当する文書が見つかりませんでした</p>
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ) : (
+                                currentDocuments.map((doc) => (
+                                    <TableRow
+                                        key={doc.id}
+                                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                                    >
+                                        <TableCell>
+                                            <div className="flex flex-col gap-2">
+                                                {getTypeBadge(doc.type)}
+                                                {doc.tags && doc.tags.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {doc.tags.map((tag) => (
+                                                            <Badge
+                                                                key={tag}
+                                                                variant="outline"
+                                                                className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                                                            >
+                                                                {TAG_LABELS[tag as PredefinedTag] || tag}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-slate-900">
+                                            {doc.subject}
+                                        </TableCell>
+                                        <TableCell className="text-slate-600">
+                                            {doc.receivedAt}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => handleDownload(doc)}
+                                                disabled={!doc.fileUrl}
+                                            >
+                      開く
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
 
             {/* Document Cards - Mobile */}
