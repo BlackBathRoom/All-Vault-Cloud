@@ -11,26 +11,36 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) => {
-    const menuItems = [
-        {
-            id: 'dashboard',
-            label: 'ダッシュボード',
-            icon: LayoutDashboard,
-            to: '/',
-        },
-        {
-            id: 'documents',
-            label: '文書一覧',
-            icon: FileText,
-            to: '/documents',
-        },
-        {
-            id: 'fax-upload',
-            label: 'FAXアップロード',
-            icon: Upload,
-            to: '/fax-upload',
-        },
-    ]
+  const [fontSize, setFontSize] = useState(100);
+
+  const handleFontSizeChange = (newSize: number) => {
+    setFontSize(newSize);
+    const root = document.documentElement;
+    root.style.fontSize = `${newSize}%`;
+  };
+
+  const fontSizeOptions = [75, 100, 125, 150, 175, 200];
+
+  const menuItems = [
+    {
+      id: 'dashboard',
+      label: 'ダッシュボード',
+      icon: LayoutDashboard,
+      to: '/',
+    },
+    {
+      id: 'documents',
+      label: '文書一覧',
+      icon: FileText,
+      to: '/documents',
+    },
+    {
+      id: 'fax-upload',
+      label: 'FAXアップロード',
+      icon: Upload,
+      to: '/fax-upload',
+    },
+  ];
 
     return (
         <>
@@ -42,55 +52,90 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
                 />
             )}
       
-            {/* サイドバー */}
-            <aside className={cn(
-                'fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out',
-                isOpen ? 'translate-x-0' : '-translate-x-full'
-            )}>
-                {/* ロゴエリア */}
-                <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
-                    <h1 className="text-[rgb(23,24,25)]">All Vault Cloud</h1>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onClose}
-                        className="bg-white hover:bg-gray-100"
-                    >
-                        <X className="w-5 h-5 text-black" />
-                    </Button>
-                </div>
+      {/* サイドバー */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col",
+        "w-64 min-w-[16rem]",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        {/* ロゴエリア */}
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
+          <h1 className="text-[rgb(23,24,25)] text-base md:text-lg whitespace-nowrap overflow-hidden text-ellipsis">All Vault Cloud</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="bg-white hover:bg-gray-100 flex-shrink-0"
+          >
+            <X className="w-5 h-5 text-black" />
+          </Button>
+        </div>
 
-                {/* メニュー */}
-                <nav className="p-4 space-y-1">
-                    {menuItems.map((item) => {
-                        const Icon = item.icon
-                        return (
-                            <Button
-                                asChild
-                                key={item.id}
-                                variant="ghost"
-                                className={cn(
-                                    'w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors justify-start',
-                                    currentView === item.id
-                                        ? 'bg-blue-50 text-blue-600 font-bold'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                                )}
-                                onClick={() => {
-                                    onViewChange(item.id)
-                                    onClose()
-                                }}
-                            >
-                                <Link to={item.to} className="flex items-center gap-3 w-full h-full">
-                                    <Icon className={cn('w-5 h-5', currentView === item.id ? 'text-blue-500' : 'text-gray-600')} />
-                                    <span>{item.label}</span>
-                                </Link>
-                            </Button>
-                        )
-                    })}
-                </nav>
-            </aside>
-        </>
-    )
-}
+        {/* メニュー */}
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                asChild
+                key={item.id}
+                variant="ghost"
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors justify-start',
+                  currentView === item.id
+                    ? 'bg-blue-50 text-blue-600 font-bold'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                )}
+                onClick={() => {
+                  onViewChange(item.id);
+                  onClose();
+                }}
+              >
+                <Link to={item.to} className="flex items-center gap-3 w-full h-full">
+                  <Icon className={cn("w-5 h-5", currentView === item.id ? "text-blue-500" : "text-gray-600")} />
+                  <span>{item.label}</span>
+                </Link>
+              </Button>
+            );
+          })}
+        </nav>
+
+        {/* 文字サイズ調整 */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Search className="w-4 h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">文字サイズ</span>
+              </span>
+              <span className="text-sm font-bold text-blue-600 whitespace-nowrap">{fontSize}%</span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-2">
+              {fontSizeOptions.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => handleFontSizeChange(size)}
+                  className={cn(
+                    "py-2 px-3 rounded-lg font-medium text-sm transition-all whitespace-nowrap",
+                    fontSize === size
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                  )}
+                >
+                  {size}%
+                </button>
+              ))}
+            </div>
+            
+            <div className="text-xs text-gray-500 text-center">
+              クリックして文字サイズを選択
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+};
 
 export default Sidebar

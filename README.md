@@ -39,6 +39,26 @@
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### 🏷️ AI自動タグ付け
+- Amazon Bedrock連携
+- Claude 3.5による文書分類
+- 10種類の自動タグ付与
+- 8カテゴリ自動判定
+
+</td>
+<td width="50%">
+
+### 🔍 高度な文書管理
+- タグによる絞り込み検索
+- フォルダ分類機能
+- 信頼度スコア表示
+- 手動タグ編集
+
+</td>
+</tr>
 </table>
 
 ---
@@ -175,6 +195,78 @@ console.log("✅ アップロード完了:", objectKey);
 ```
 </details>
 
+### 🏷️ タグ・分類管理
+
+<details>
+<summary><b>PATCH</b> <code>/documents/{id}/tags</code> - タグ更新</summary>
+
+#### リクエストボディ
+```json
+{
+  "tags": ["important", "invoice", "urgent"],
+  "folder": "請求書",
+  "category": "invoice"
+}
+```
+
+#### 使用例
+```bash
+curl -X PATCH \
+  https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents/abc123/tags \
+  -H "Content-Type: application/json" \
+  -d '{"tags": ["important", "invoice"]}'
+```
+</details>
+
+<details>
+<summary><b>POST</b> <code>/documents/{id}/classify</code> - AI自動分類</summary>
+
+#### 機能
+Amazon Bedrock (Claude 3.5 Sonnet) を使用して文書を自動分類
+
+#### タグ一覧（10種類）
+- `important`: 重要な文書
+- `urgent`: 至急対応が必要
+- `invoice`: 請求書
+- `order`: 注文書・発注書
+- `contract`: 契約書
+- `payment`: 支払い関連
+- `internal`: 社内文書
+- `customer`: 顧客関連
+- `supplier`: 取引先関連
+- `archived`: アーカイブ済み
+
+#### カテゴリ一覧（8種類）
+- `invoice`: 請求書
+- `order`: 注文書
+- `contract`: 契約書
+- `quotation`: 見積書
+- `receipt`: 領収書
+- `notification`: 通知
+- `internal`: 社内文書
+- `other`: その他
+
+#### レスポンス例
+```json
+{
+  "classification": {
+    "tags": ["important", "invoice", "payment", "customer"],
+    "category": "invoice",
+    "confidence": 0.95,
+    "reasoning": "「御請求書」と明記され、請求金額、支払期限、振込先情報が記載されている。"
+  },
+  "message": "自動分類が完了しました"
+}
+```
+
+#### 使用例
+```bash
+curl -X POST \
+  https://24bdzijg8k.execute-api.ap-northeast-1.amazonaws.com/documents/abc123/classify \
+  -H "Content-Type: application/json"
+```
+</details>
+
 ### 📧 メール送信
 
 <details>
@@ -227,7 +319,12 @@ curl -X POST \
 | **pdfKey** | String | S3上のPDFパス |
 | **textKey** | String | OCR結果/メール本文パス |
 | **parentMailId** | String | 親メールID（添付ファイルのみ） |
+| **tags** | List | タグ配列（例: `["important", "invoice"]`） |
+| **folder** | String | フォルダ名（例: "請求書"） |
+| **category** | String | カテゴリ（例: "invoice"） |
+| **classificationConfidence** | Number | AI分類の信頼度（0.0～1.0） |
 | **createdAt** | String | ISO8601形式のタイムスタンプ |
+| **updatedAt** | String | 更新日時 |
 
 ---
 
@@ -258,6 +355,7 @@ avc-system/
 | `avc-api-email-send` | API Gateway | メール送信（SES） |
 | `ImageOCRFunction` | S3 (uploads/raw/) | OCR処理 → PDF変換 |
 | `MailIngestFunction` | S3 (ses-raw-mail/) | メール解析 → DB登録 |
+| `avc-api-tags` | API Gateway | タグ更新・AI分類 |
 
 ---
 
@@ -293,10 +391,11 @@ avc-system/
 ## 🎯 今後の実装予定
 
 - [ ] 全文検索機能（OpenSearch連携）
-- [ ] タグ付け・カテゴリ分類
+- [x] ~~タグ付け・カテゴリ分類~~ ✅ 完了（AI自動分類実装済み）
 - [ ] モバイルアプリ対応
 - [ ] 通知機能（SNS）
 - [ ] 複数ユーザー対応（Cognito）
+- [ ] バッチ分類機能（複数ドキュメント一括処理）
 
 ---
 

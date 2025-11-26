@@ -14,7 +14,9 @@ const HomePage: React.FC = () => {
         <div className="min-h-screen flex flex-col bg-gray-50">
             {/* ヘッダー */}
             <div className="fixed top-0 left-0 right-0 z-30">
-                <Header onMenuClick={() => setSidebarOpen(true)} />
+                <Header 
+                    onMenuClick={() => setSidebarOpen(true)}
+                />
             </div>
             {/* サイドバー */}
             <Sidebar

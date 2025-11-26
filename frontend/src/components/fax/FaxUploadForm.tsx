@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { Upload, Camera, FileText, Info } from 'lucide-react'
 import { Button } from '../ui/button'
-import { getPresignedUrl } from '../../api/uploadsApi.ts'
+import { uploadImage, type ImageUploadResult } from '../../api/imageUploadsApi'
+import type { Document } from '../../types/document'
 import CameraModal from './CameraModal'
 
 const FaxUploadForm: React.FC = () => {
@@ -78,34 +79,58 @@ const FaxUploadForm: React.FC = () => {
             setUploadStatus('uploading')
             setMessage('')
 
-            // 署名付きURL取得
-            const { url } = await getPresignedUrl(selectedFile.name, selectedFile.type)
-
-            // S3にアップロード
-            const response = await fetch(url, {
-                method: 'PUT',
-                body: selectedFile,
-                headers: {
-                    'Content-Type': selectedFile.type,
-                },
+            console.log('🚀 FaxUploadForm: アップロード開始', {
+                fileName: selectedFile.name,
+                fileType: selectedFile.type,
+                fileSize: selectedFile.size
             })
 
-            if (response.ok) {
+            // imageUploadsApiのuploadImage関数を使用（統合フロー）
+            const result: ImageUploadResult = await uploadImage(selectedFile)
+
+            if (result.success) {
                 setUploadStatus('success')
-                setMessage('アップロード成功！')
+                
+                // アップロード成功時に元ファイル名を表示
+                const displayName = result.fileName || selectedFile.name
+                setMessage(`アップロード成功！ファイル名: ${displayName}`)
+                
+                console.log('✅ FaxUploadForm: アップロード成功', {
+                    objectKey: result.objectKey,
+                    fileName: result.fileName,
+                    originalFileName: selectedFile.name
+                })
+
+                // ここでDocument型のデータを作成（例：将来的にDocumentListに追加する場合）
+                const newDocument: Document = {
+                    id: crypto.randomUUID(), // 仮のID生成
+                    type: 'fax' as const,
+                    subject: result.fileName || selectedFile.name, // ★ 元ファイル名を件名に
+                    sender: '画像アップロード',
+                    receivedAt: new Date().toISOString(),
+                    s3Key: result.objectKey, // S3オブジェクトキー
+                }
+                
+                console.log('📄 作成されたDocument:', newDocument)
+                
                 setTimeout(() => {
                     setSelectedFile(null)
                     setUploadStatus('idle')
                     setMessage('')
-                }, 2000)
+                }, 5000) // 5秒間表示（ファイル名を確認できるよう少し長め）
             } else {
                 setUploadStatus('error')
-                setMessage('アップロード失敗')
+                setMessage(result.error || 'アップロードに失敗しました')
+                
+                console.error('❌ FaxUploadForm: アップロード失敗', {
+                    error: result.error
+                })
             }
         } catch (error) {
-            console.error('Upload error:', error)
+            console.error('❌ FaxUploadForm: アップロードエラー', error)
             setUploadStatus('error')
-            setMessage('エラーが発生しました')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            setMessage(`エラー: ${errorMessage}`)
         }
     }
 

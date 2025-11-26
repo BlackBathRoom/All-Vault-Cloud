@@ -1,6 +1,5 @@
 import { apiClient } from './client'
-import { Document } from '../types/document'
-
+import type { Document } from '../types/document'
 // ----------------------
 // APIレスポンス型
 // ----------------------
