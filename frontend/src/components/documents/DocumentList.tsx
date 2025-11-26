@@ -11,6 +11,7 @@ import {
     ArrowDown,
     MessageSquare,
     Edit3,
+    Trash2,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -93,7 +94,8 @@ export function DocumentList() {
     const [memoDialogOpen, setMemoDialogOpen] = useState(false)
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
     const [memoText, setMemoText] = useState<string>('')
-    const [savingMemo, setSavingMemo] = useState(false) 
+    const [savingMemo, setSavingMemo] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false) 
 
     useEffect(() => {
         const load = async () => {
@@ -310,6 +312,32 @@ export function DocumentList() {
         setMemoDialogOpen(false)
         setSelectedDoc(null)
         setMemoText('')
+        setShowDeleteConfirm(false)
+    }
+    
+    // メモ削除
+    const deleteMemo = async () => {
+        if (!selectedDoc) return
+        
+        try {
+            setSavingMemo(true)
+            // ローカル状態を更新（メモを削除）
+            setDocuments(prev => prev.map(doc => 
+                doc.id === selectedDoc.id 
+                    ? { ...doc, latestMemo: null }
+                    : doc
+            ))
+            
+            setMemoDialogOpen(false)
+            setSelectedDoc(null)
+            setMemoText('')
+            setShowDeleteConfirm(false)
+        } catch (error) {
+            console.error('メモの削除に失敗:', error)
+            alert('メモの削除に失敗しました')
+        } finally {
+            setSavingMemo(false)
+        }
     }
 
     // ページネーション計算
@@ -722,13 +750,52 @@ export function DocumentList() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
-                        <textarea
-                            value={memoText}
-                            onChange={(e) => setMemoText(e.target.value)}
-                            placeholder="メモを入力してください..."
-                            className="w-full min-h-[150px] p-3 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                            autoFocus
-                        />
+                        <div className="relative">
+                            <textarea
+                                value={memoText}
+                                onChange={(e) => setMemoText(e.target.value)}
+                                placeholder="メモを入力してください..."
+                                className="w-full min-h-[150px] p-3 pr-12 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                autoFocus
+                            />
+                            {selectedDoc?.latestMemo && (
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    disabled={savingMemo}
+                                    className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    title="メモを削除"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            )}
+                        </div>
+                        {showDeleteConfirm && (
+                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                                <p className="text-sm text-red-800 mb-3">メモを削除しますか？</p>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={deleteMemo}
+                                        disabled={savingMemo}
+                                        className="flex-1"
+                                    >
+                                        {savingMemo ? '削除中...' : '削除する'}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        disabled={savingMemo}
+                                        className="flex-1"
+                                    >
+                                        キャンセル
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button
@@ -736,7 +803,7 @@ export function DocumentList() {
                             onClick={closeMemoDialog}
                             disabled={savingMemo}
                         >
-                            キャンセル
+                            閉じる
                         </Button>
                         <Button
                             onClick={saveMemo}
