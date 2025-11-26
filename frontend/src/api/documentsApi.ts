@@ -1,104 +1,71 @@
 import { apiClient } from './client'
-import { Document } from '../types/document'
+import type { Document } from '../types/document'
 
-// Lambda（S3一覧API）から返ってくる生データの型
-type S3ApiFile = {
-  key: string
-  url: string
-  size: number | null
-  lastModified: string | null
+/**
+ * バックエンド（/documents API）から返ってくる文書データの型
+ * README のサンプルに合わせた最小限の定義だけを持っています。
+ */
+type BackendDocument = {
+  id: string
+  type?: 'fax' | 'email' | 'document'
+  subject?: string | null
+  sender?: string | null
+  receivedAt?: string | null
+  createdAt?: string | null
+  s3Key?: string
+  extractedText?: string
+  metadata?: Record<string, unknown>
+  tags?: string[]
+  folder?: string
 }
 
-// API のデータ → UI 用 Document に変換
-const mapToDocument = (item: S3ApiFile): Document => {
-  // ファイル名だけ抜き出し
-  const fileName = item.key.split('/').pop() ?? item.key
+/**
+ * API の生データ → フロントエンド用 Document 型 に変換
+ */
+const mapToDocument = (item: BackendDocument): Document => {
+  const receivedAt = item.receivedAt ?? item.createdAt ?? ''
 
-  // 日付の整形
-  const receivedAt =
-    item.lastModified != null
-      ? new Date(item.lastModified).toLocaleString('ja-JP', {
-          timeZone: 'Asia/Tokyo',
-        })
-      : '(日時不明)'
+  // type が未知の場合は 'document' として扱う
+  const docType: Document['type'] =
+    item.type === 'fax' || item.type === 'email' ? item.type : 'document'
 
   return {
-    id: item.key,                 // 一意なIDとして S3キーを使う
-    type: 'fax',                  // PDF（FAX文書）として扱う
-    subject: fileName,            // 件名代わりにファイル名
-    sender: '(S3アップロード)',   // 送信者情報が無いので固定文言
-    receivedAt,                   // 整形済み日付
-    s3Key: item.key,              // ダウンロード等で使えるように保持
-    fileUrl: item.url,            // 署名付きダウンロードURL
-    fileSize: item.size,          // ファイルサイズ
+    id: item.id,
+    type: docType,
+    subject: item.subject ?? '',
+    sender: item.sender ?? '',
+    receivedAt,
+    s3Key: item.s3Key,
+    extractedText: item.extractedText,
+    metadata: item.metadata,
+    tags: item.tags,
+    folder: item.folder,
   }
 }
 
-// 一覧取得：/documents は S3 の PDF一覧を返す Lambda に紐づいている
-export const getDocuments = async (_type?: string): Promise<Document[]> => {
-  try {
-    console.log('📡 S3 Lambda API 呼び出し開始...')
-    
-    // 🧪 モックデータでテスト（API Gateway未デプロイ対応）
-    const USE_MOCK_DATA = false // 実API有効時はfalseに変更 ✅ 実API使用中
-    
-    if (USE_MOCK_DATA) {
-      console.log('🧪 モックデータを使用中...')
-      
-      // モックのS3ファイルデータ
-      const mockApiData: S3ApiFile[] = [
-        {
-          key: 'uploads/pdf/fax-001.pdf',
-          url: 'https://example.com/mock-signed-url-1',
-          size: 156789,
-          lastModified: '2025-11-23T10:30:00.000Z'
-        },
-        {
-          key: 'uploads/pdf/fax-002.pdf',
-          url: 'https://example.com/mock-signed-url-2',
-          size: 234567,
-          lastModified: '2025-11-22T14:15:00.000Z'
-        },
-        {
-          key: 'uploads/pdf/document-003.pdf',
-          url: 'https://example.com/mock-signed-url-3',
-          size: 345678,
-          lastModified: '2025-11-21T09:45:00.000Z'
-        },
-        {
-          key: 'uploads/pdf/scan-004.pdf',
-          url: 'https://example.com/mock-signed-url-4',
-          size: 123456,
-          lastModified: '2025-11-20T16:20:00.000Z'
-        }
-      ]
-      
-      console.log('📥 モックレスポンス:', mockApiData)
-      console.log('📊 モックファイル数:', mockApiData.length)
-      
-      const documents = mockApiData.map(mapToDocument)
-      
-      console.log('✅ モックDocument変換完了:', documents)
-      
-      return documents
-    }
-    
-    // DynamoDBからドキュメント一覧を取得（タグ情報含む）
-    const documents: Document[] = await apiClient.get('/documents')
-    
-    console.log('📥 Lambda レスポンス:', documents)
-    console.log('📊 取得ファイル数:', documents.length)
-    console.log('✅ Document取得完了')
-    
-    return documents
-  } catch (error) {
-    console.error('❌ S3 Lambda API エラー:', error)
-    throw new Error(`S3ファイルの取得に失敗しました: ${error}`)
+/**
+ * 文書一覧取得
+ * バックエンドの GET /documents を叩いて、必要に応じて type でフィルタします。
+ *
+ * @param type - 例: 'fax', 'email', 'email_body', 'email_attachment' など
+ */
+export const getDocuments = async (type?: string): Promise<Document[]> => {
+  const endpoint = type ? `/documents?type=${encodeURIComponent(type)}` : '/documents'
+
+  const response = await apiClient.get(endpoint)
+
+  if (!Array.isArray(response)) {
+    throw new Error('Invalid response format: documents list must be an array')
   }
+
+  return response.map((item) => mapToDocument(item as BackendDocument))
 }
 
-// 単一取得：バックエンドに /documents/{id} が無いので、
-// 一度一覧を取ってからフロント側で絞り込む方式にしておく
+/**
+ * 単一文書取得
+ * まだバックエンドの /documents/{id} を直接は使わず、
+ * 一度一覧を取ってからフロント側で絞り込む方式にしておきます。
+ */
 export const getDocumentById = async (id: string): Promise<Document> => {
   const documents = await getDocuments()
   const doc = documents.find((d) => d.id === id)
