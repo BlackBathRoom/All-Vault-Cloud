@@ -41,6 +41,11 @@ type DocumentRecord = {
     latestMemoUpdatedAt?: string | null
 }
 
+const isEmptyMemoText = (text: string | null | undefined): boolean => {
+    return !text || text.trim() === ''
+}
+
+
 /**
  * HTTP メソッドを型安全に取り出すヘルパー
  */
@@ -110,14 +115,57 @@ export const handler = async (
             )
 
             const item = res.Item as DocumentRecord | undefined
-            const memos: MemoItem[] = item?.memos ?? []
+            const rawMemos: MemoItem[] = item?.memos ?? []
 
+            // 空メモを除外したリスト
+            const cleanedMemos: MemoItem[] = rawMemos.filter(
+                (m) => !isEmptyMemoText(m.text)
+            )
+
+            // もし空メモが混じっていたら、このタイミングでDBも綺麗にする
+            if (cleanedMemos.length !== rawMemos.length) {
+                const last: MemoItem | null =
+            cleanedMemos.length > 0
+                ? cleanedMemos[cleanedMemos.length - 1]
+                : null
+
+                if (last) {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m, latestMemoText = :text, latestMemoUpdatedAt = :updatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': cleanedMemos,
+                                ':text': last.text,
+                                ':updatedAt': last.updatedAt,
+                            },
+                        })
+                    )
+                } else {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m REMOVE latestMemoText, latestMemoUpdatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': [],
+                            },
+                        })
+                    )
+                }
+            }
+
+            // クライアントには「空じゃないメモだけ」返す
             return {
                 statusCode: 200,
                 headers: corsHeaders,
-                body: JSON.stringify(memos),
+                body: JSON.stringify(cleanedMemos),
             }
         }
+
 
         const body = event.body ? (JSON.parse(event.body) as unknown) : {}
 
@@ -208,6 +256,70 @@ export const handler = async (
                     ? req.page
                     : null
 
+            // 🧹 ここがポイント：空メモなら「保存せず」「既存の空メモも削除」
+            if (!text || text.trim() === '') {
+                console.log('🧹 空メモ扱いとして既存の空メモを削除します')
+
+                // 現在の memos を取得
+                const getRes = await ddb.send(
+                    new GetCommand({
+                        TableName: DOCUMENTS_TABLE,
+                        Key: { id: documentId },
+                        ProjectionExpression: 'memos',
+                    })
+                )
+
+                const item = getRes.Item as DocumentRecord | undefined
+                const rawMemos: MemoItem[] = item?.memos ?? []
+
+                // text が null/空のメモを全部除外
+                const cleanedMemos: MemoItem[] = rawMemos.filter(
+                    (m) => m.text && m.text.trim() !== ''
+                )
+
+                // latestMemo を再計算
+                const last: MemoItem | null =
+                    cleanedMemos.length > 0
+                        ? cleanedMemos[cleanedMemos.length - 1]
+                        : null
+
+                if (last) {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m, latestMemoText = :text, latestMemoUpdatedAt = :updatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': cleanedMemos,
+                                ':text': last.text,
+                                ':updatedAt': last.updatedAt,
+                            },
+                        })
+                    )
+                } else {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m REMOVE latestMemoText, latestMemoUpdatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': [],
+                            },
+                        })
+                    )
+                }
+
+                // 新しいメモは作らず終了
+                return {
+                    statusCode: 204,
+                    headers: corsHeaders,
+                    body: '',
+                }
+            }
+
+            // ここから先は「ちゃんと文字が入っているときだけ」実行される
             const memo: MemoItem = {
                 memoId: randomUUID(),
                 text,
@@ -239,6 +351,7 @@ export const handler = async (
                 body: JSON.stringify(memo),
             }
         }
+
 
         // 他メソッドは 405
         return {
