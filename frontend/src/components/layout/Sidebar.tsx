@@ -2,7 +2,7 @@ import { LayoutDashboard, FileText, Upload, X, Search } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 
 interface SidebarProps {
   currentView: string;
