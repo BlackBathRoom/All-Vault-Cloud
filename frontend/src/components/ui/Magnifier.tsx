@@ -8,49 +8,21 @@ interface MagnifierProps {
 export function Magnifier({ isActive }: MagnifierProps) {
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [isVisible, setIsVisible] = useState(false)
-    const [screenshot, setScreenshot] = useState<string | null>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const captureTimeout = useRef<NodeJS.Timeout>()
+    const animationFrameRef = useRef<number>()
 
     useEffect(() => {
         if (!isActive) {
             setIsVisible(false)
-            setScreenshot(null)
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current)
+            }
             return
         }
-
-        // 初回のスクリーンショット取得
-        const captureScreen = async () => {
-            try {
-                const canvas = await html2canvas(document.body, {
-                    scale: window.devicePixelRatio || 1,
-                    useCORS: true,
-                    logging: false,
-                    allowTaint: true,
-                    width: window.innerWidth,
-                    height: window.innerHeight,
-                    scrollX: 0,
-                    scrollY: 0,
-                })
-                setScreenshot(canvas.toDataURL())
-            } catch (error) {
-                console.error('スクリーンショット取得エラー:', error)
-            }
-        }
-
-        captureScreen()
 
         const handleMouseMove = (e: MouseEvent) => {
             setPosition({ x: e.clientX, y: e.clientY })
             setIsVisible(true)
-
-            // スクリーンショットを定期的に更新（パフォーマンスのため500ms間隔）
-            if (captureTimeout.current) {
-                clearTimeout(captureTimeout.current)
-            }
-            captureTimeout.current = setTimeout(() => {
-                captureScreen()
-            }, 500)
         }
 
         const handleMouseLeave = () => {
@@ -63,48 +35,88 @@ export function Magnifier({ isActive }: MagnifierProps) {
         return () => {
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseleave', handleMouseLeave)
-            if (captureTimeout.current) {
-                clearTimeout(captureTimeout.current)
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current)
             }
         }
     }, [isActive])
 
-    // スクリーンショットから拡大部分を描画
+    // リアルタイムで画面をキャプチャして拡大表示
     useEffect(() => {
-        if (!screenshot || !canvasRef.current || !isVisible) return
+        if (!isActive || !isVisible || !canvasRef.current) return
 
         const canvas = canvasRef.current
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        const img = new Image()
-        img.onload = () => {
-            const dpr = window.devicePixelRatio || 1
-            const sourceSize = 60 * dpr
-            const destSize = 200
+        const magnifierSize = 200
+        const zoom = 2.5
+        const captureSize = magnifierSize / zoom
 
-            // 取得元の座標（デバイスピクセル比を考慮）
-            const sourceX = Math.max(0, position.x * dpr - sourceSize / 2)
-            const sourceY = Math.max(0, position.y * dpr - sourceSize / 2)
+        const updateMagnifier = async () => {
+            try {
+                // マウス位置周辺の要素を取得
+                const element = document.elementFromPoint(position.x, position.y)
+                if (!element) return
 
-            // キャンバスをクリア
-            ctx.clearRect(0, 0, destSize, destSize)
+                // その要素を含む最も近い親要素をキャプチャ
+                const targetElement = element.closest('div, td, th, p, span, button, a') || document.body
 
-            // 拡大して描画
-            ctx.drawImage(
-                img,
-                sourceX,
-                sourceY,
-                sourceSize,
-                sourceSize,
-                0,
-                0,
-                destSize,
-                destSize
-            )
+                const rect = targetElement.getBoundingClientRect()
+                const elementCanvas = await html2canvas(targetElement as HTMLElement, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true,
+                    backgroundColor: null,
+                    width: rect.width,
+                    height: rect.height,
+                    windowWidth: rect.width,
+                    windowHeight: rect.height,
+                })
+
+                // マウス位置がその要素内のどこにあるかを計算
+                const relativeX = position.x - rect.left
+                const relativeY = position.y - rect.top
+                
+                // キャンバスをクリア
+                ctx.clearRect(0, 0, magnifierSize, magnifierSize)
+                ctx.fillStyle = 'white'
+                ctx.fillRect(0, 0, magnifierSize, magnifierSize)
+
+                // 拡大して描画
+                const sourceX = Math.max(0, (relativeX * 2) - captureSize)
+                const sourceY = Math.max(0, (relativeY * 2) - captureSize)
+                
+                ctx.drawImage(
+                    elementCanvas,
+                    sourceX,
+                    sourceY,
+                    captureSize * 2,
+                    captureSize * 2,
+                    0,
+                    0,
+                    magnifierSize,
+                    magnifierSize
+                )
+            } catch (error) {
+                // エラーは無視（パフォーマンスのため）
+            }
+
+            if (isActive && isVisible) {
+                animationFrameRef.current = requestAnimationFrame(updateMagnifier)
+            }
         }
-        img.src = screenshot
-    }, [screenshot, position, isVisible])
+
+        // 初回実行
+        updateMagnifier()
+
+        return () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current)
+            }
+        }
+    }, [isActive, isVisible, position.x, position.y])
 
     if (!isActive || !isVisible) return null
 
@@ -157,10 +169,10 @@ export function Magnifier({ isActive }: MagnifierProps) {
                     position: 'fixed',
                     left: `${position.x}px`,
                     top: `${position.y}px`,
-                    width: '20px',
-                    height: '20px',
+                    width: '30px',
+                    height: '30px',
                     pointerEvents: 'none',
-                    zIndex: 9998,
+                    zIndex: 10000,
                     transform: 'translate(-50%, -50%)',
                 }}
             >
@@ -171,7 +183,7 @@ export function Magnifier({ isActive }: MagnifierProps) {
                         top: '0',
                         width: '2px',
                         height: '100%',
-                        backgroundColor: '#2563eb',
+                        backgroundColor: '#ef4444',
                         transform: 'translateX(-50%)',
                     }}
                 />
@@ -182,8 +194,21 @@ export function Magnifier({ isActive }: MagnifierProps) {
                         top: '50%',
                         width: '100%',
                         height: '2px',
-                        backgroundColor: '#2563eb',
+                        backgroundColor: '#ef4444',
                         transform: 'translateY(-50%)',
+                    }}
+                />
+                {/* 中心の円 */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: '#ef4444',
+                        borderRadius: '50%',
+                        transform: 'translate(-50%, -50%)',
                     }}
                 />
             </div>
