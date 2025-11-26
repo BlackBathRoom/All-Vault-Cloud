@@ -1,5 +1,3 @@
-
-// frontend/src/api/documentsApi.ts
 import { apiClient } from './client'
 import { Document } from '../types/document'
 
@@ -35,14 +33,14 @@ export type DocumentMemo = {
 }
 
 // -------------------------------------
-// axios / fetch 両方に対応する安全な unwrap
+// axios / fetch 両方に対応する unwrap
 // -------------------------------------
 function unwrapData<T>(response: unknown): T {
-    // axios の場合 → { data: ... }
+// axios の場合 → { data: ... }
     if (
         typeof response === 'object' &&
-        response !== null &&
-        'data' in response
+    response !== null &&
+    'data' in response
     ) {
         return (response as { data: T }).data
     }
@@ -51,20 +49,27 @@ function unwrapData<T>(response: unknown): T {
     return response as T
 }
 
+// -------------------------------------
+// 空メモ判定（ここは必ず getDocuments より上に置く）
+// -------------------------------------
+const isEmptyText = (text: string | null | undefined): boolean => {
+    return !text || text.trim() === ''
+}
+
 // ----------------------
 // 文書一覧 GET /documents
 // ----------------------
 export const getDocuments = async (): Promise<Document[]> => {
     try {
         const response = await apiClient.get('/documents')
-    
+
         // axios 形式でも fetch 形式でも正しく取れる
         const raw = unwrapData<DocumentsResponse>(response)
-    
+
         const apiDocs = Array.isArray(raw)
             ? raw
             : raw.documents ?? []
-    
+
         return apiDocs.map((d): Document => ({
             id: d.id,
             type: d.type,
@@ -74,14 +79,19 @@ export const getDocuments = async (): Promise<Document[]> => {
             s3Key: d.s3Key,
             fileUrl: d.fileUrl ?? undefined,
             fileSize: d.fileSize ?? undefined,
-            latestMemo: d.latestMemo ?? null,
+
+            // 空メモは null 扱いにする
+            latestMemo:
+            d.latestMemo && !isEmptyText(d.latestMemo.text)
+                ? d.latestMemo
+                : null,
         }))
     } catch (error) {
         console.error('❌ Documents API エラー:', error)
         throw new Error('文書一覧の取得に失敗しました')
     }
 }
-  
+
 // ----------------------
 // メモ一覧 GET /documents/{id}/memos
 // ----------------------
@@ -91,7 +101,11 @@ export const getDocumentMemos = async (
     const response = await apiClient.get(
         `/documents/${documentId}/memos`
     )
-    return unwrapData<DocumentMemo[]>(response)
+
+    const memos = unwrapData<DocumentMemo[]>(response)
+
+    // 空メモ（一切の文字なし）は除外する
+    return memos.filter((m) => !isEmptyText(m.text))
 }
 
 // ----------------------
@@ -114,6 +128,9 @@ export const createDocumentMemo = async (
     return unwrapData<DocumentMemo>(response)
 }
 
+// ----------------------
+// メモ削除 POST /documents/{id}/memos (mode: delete)
+// ----------------------
 export const deleteDocumentMemo = async (
     documentId: string,
     memoId: string
@@ -128,4 +145,3 @@ export const deleteDocumentMemo = async (
         throw new Error('メモの削除に失敗しました')
     }
 }
-
