@@ -14,6 +14,7 @@ interface DashboardContentProps {
   currentView: string;
 }
 
+/**
  * UUID_ファイル名 → ファイル名 に変換
  * 例: "550e8400-e29b-41d4-a716-446655440000_社内通知.pdf"
  *     → "社内通知.pdf"
