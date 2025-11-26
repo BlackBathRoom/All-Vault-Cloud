@@ -16,7 +16,8 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
 
   const handleFontSizeChange = (newSize: number) => {
     setFontSize(newSize);
-    document.body.style.fontSize = `${newSize}%`;
+    const root = document.documentElement;
+    root.style.fontSize = `${newSize}%`;
   };
 
   const fontSizeOptions = [75, 100, 125, 150, 175, 200];
