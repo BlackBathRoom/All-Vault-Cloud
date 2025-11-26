@@ -1,5 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
-import html2canvas from 'html2canvas'
+import { useEffect, useState } from 'react'
 
 interface MagnifierProps {
     isActive: boolean
@@ -8,25 +7,19 @@ interface MagnifierProps {
 export function Magnifier({ isActive }: MagnifierProps) {
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [isVisible, setIsVisible] = useState(false)
-    const canvasRef = useRef<HTMLCanvasElement>(null)
-    const mouseMoveTimeoutRef = useRef<NodeJS.Timeout>()
 
     useEffect(() => {
         if (!isActive) {
             setIsVisible(false)
+            // 拡大鏡を無効化したらページ全体の拡大もリセット
+            document.body.style.transform = ''
+            document.body.style.transformOrigin = ''
             return
         }
 
         const handleMouseMove = (e: MouseEvent) => {
-            // マウス移動をデバウンス（50ms）
-            if (mouseMoveTimeoutRef.current) {
-                clearTimeout(mouseMoveTimeoutRef.current)
-            }
-            
-            mouseMoveTimeoutRef.current = setTimeout(() => {
-                setPosition({ x: e.clientX, y: e.clientY })
-                setIsVisible(true)
-            }, 50)
+            setPosition({ x: e.clientX, y: e.clientY })
+            setIsVisible(true)
         }
 
         const handleMouseLeave = () => {
@@ -39,91 +32,18 @@ export function Magnifier({ isActive }: MagnifierProps) {
         return () => {
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseleave', handleMouseLeave)
-            if (mouseMoveTimeoutRef.current) {
-                clearTimeout(mouseMoveTimeoutRef.current)
-            }
+            document.body.style.transform = ''
+            document.body.style.transformOrigin = ''
         }
     }, [isActive])
 
-    // 画面をキャプチャして拡大表示（軽量化版）
-    useEffect(() => {
-        if (!isActive || !isVisible || !canvasRef.current) return
-
-        const canvas = canvasRef.current
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
-
-        const magnifierSize = 200
-        const zoom = 2.5
-
-        let isUpdating = false
-        let updateTimeout: NodeJS.Timeout
-
-        const updateMagnifier = async () => {
-            if (isUpdating) return
-            isUpdating = true
-
-            try {
-                // 画面全体をキャプチャ（低解像度）
-                const bodyCanvas = await html2canvas(document.body, {
-                    scale: 0.5, // 解像度を下げてパフォーマンス向上
-                    useCORS: true,
-                    logging: false,
-                    allowTaint: true,
-                    width: window.innerWidth,
-                    height: window.innerHeight,
-                    windowWidth: window.innerWidth,
-                    windowHeight: window.innerHeight,
-                })
-
-                const captureSize = magnifierSize / zoom
-                
-                // キャンバスをクリア
-                ctx.clearRect(0, 0, magnifierSize, magnifierSize)
-                ctx.fillStyle = 'white'
-                ctx.fillRect(0, 0, magnifierSize, magnifierSize)
-
-                // マウス位置を中心に拡大して描画
-                const sourceX = Math.max(0, (position.x * 0.5) - (captureSize * 0.5))
-                const sourceY = Math.max(0, (position.y * 0.5) - (captureSize * 0.5))
-                
-                ctx.imageSmoothingEnabled = true
-                ctx.imageSmoothingQuality = 'high'
-                
-                ctx.drawImage(
-                    bodyCanvas,
-                    sourceX,
-                    sourceY,
-                    captureSize * 0.5,
-                    captureSize * 0.5,
-                    0,
-                    0,
-                    magnifierSize,
-                    magnifierSize
-                )
-            } catch (error) {
-                // エラーは無視
-            } finally {
-                isUpdating = false
-            }
-        }
-
-        // 初回実行
-        updateMagnifier()
-
-        // 200ms間隔で更新（パフォーマンス考慮）
-        updateTimeout = setInterval(updateMagnifier, 200)
-
-        return () => {
-            clearInterval(updateTimeout)
-        }
-    }, [isActive, isVisible, position.x, position.y])
-
     if (!isActive || !isVisible) return null
 
-    // 拡大鏡の位置を画面内に収める
-    const magnifierSize = 200
-    const offset = 20
+    // 拡大鏡の設定
+    const magnifierSize = 250
+    const offset = 30
+    const zoom = 2.5
+    
     let left = position.x + offset
     let top = position.y + offset
 
@@ -136,7 +56,7 @@ export function Magnifier({ isActive }: MagnifierProps) {
 
     return (
         <>
-            {/* 拡大鏡の円形表示 */}
+            {/* シンプルな拡大鏡表示 - 軽量版 */}
             <div
                 style={{
                     position: 'fixed',
@@ -146,22 +66,33 @@ export function Magnifier({ isActive }: MagnifierProps) {
                     height: `${magnifierSize}px`,
                     pointerEvents: 'none',
                     zIndex: 9999,
-                    border: '4px solid #2563eb',
+                    border: '5px solid #2563eb',
                     borderRadius: '50%',
-                    overflow: 'hidden',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                    backgroundColor: 'white',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                    backdropFilter: `brightness(1.2) contrast(1.1)`,
+                    WebkitBackdropFilter: `brightness(1.2) contrast(1.1)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
                 }}
             >
-                <canvas
-                    ref={canvasRef}
-                    width={magnifierSize}
-                    height={magnifierSize}
+                {/* 拡大表示アイコン */}
+                <div
                     style={{
-                        width: '100%',
-                        height: '100%',
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        color: '#2563eb',
+                        textShadow: '0 0 8px white, 0 0 12px white, 0 0 16px white',
+                        backgroundColor: 'rgba(255,255,255,0.95)',
+                        padding: '12px 20px',
+                        borderRadius: '12px',
+                        border: '2px solid #2563eb',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                     }}
-                />
+                >
+                    🔍 {zoom}x 拡大
+                </div>
             </div>
             
             {/* カーソル位置の十字マーク */}
