@@ -217,22 +217,22 @@ export function DocumentList() {
 
 
     return (
-        <div className="space-y-4 md:space-y-6">
+        <div className="space-y-4 md:space-y-6 max-w-full overflow-hidden">
             {/* Page Title */}
             <div>
-                <h2 className="text-xl md:text-2xl text-slate-900">文書一覧</h2>
-                <p className="text-sm md:text-base text-slate-600 mt-1">
+                <h2 className="text-base md:text-xl text-slate-900">文書一覧</h2>
+                <p className="text-xs md:text-sm text-slate-600 mt-1">
           受信した文書を管理・閲覧できます
                 </p>
             </div>
 
             {/* Filters and Search */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 md:p-6">
-                <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3 md:p-4">
+                <div className="flex flex-col gap-3">
                     {/* Type Filter */}
-                    <div className="flex items-center gap-3">
-                        <Filter className="size-5 text-slate-600 flex-shrink-0" />
-                        <label className="text-slate-700 min-w-fit text-sm md:text-base">
+                    <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                        <label className="text-slate-700 min-w-fit text-xs md:text-sm">
               種別:
                         </label>
                         <Select value={filterType} onValueChange={setFilterType}>
@@ -250,19 +250,19 @@ export function DocumentList() {
 
                     {/* Search */}
                     <div className="flex items-center gap-2">
-                        <Search className="size-5 text-slate-600 flex-shrink-0" />
+                        <Search className="w-4 h-4 text-slate-600 flex-shrink-0" />
                         <Input
                             type="text"
                             placeholder="件名で検索..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="flex-1"
+                            className="flex-1 text-sm"
                         />
                     </div>
 
                     {/* Tag Filter */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-slate-700 text-sm md:text-base">
+                        <label className="text-slate-700 text-xs md:text-sm">
               タグでフィルター:
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -299,7 +299,7 @@ export function DocumentList() {
             </div>
 
             {/* Results Count */}
-            <div className="text-sm md:text-base text-slate-600 px-1">
+            <div className="text-xs md:text-sm text-slate-600 px-1">
                 {filteredDocuments.length}件の文書が見つかりました
                 {totalPages > 1 && (
                     <span className="ml-2">
@@ -313,32 +313,32 @@ export function DocumentList() {
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader className="sticky top-0 z-10 bg-slate-50">
-                            <TableRow className="bg-slate-50">
-                                <TableHead className="min-w-[8.75rem] bg-slate-50">種別</TableHead>
-                                <TableHead className="min-w-[15rem] bg-slate-50">件名</TableHead>
-                                <TableHead className="min-w-[12.5rem] bg-slate-50">
+                            <TableRow className="bg-slate-50 text-xs">
+                                <TableHead className="min-w-[8rem] bg-slate-50 py-2 px-3 text-xs">種別</TableHead>
+                                <TableHead className="min-w-[12rem] bg-slate-50 py-2 px-3 text-xs">件名</TableHead>
+                                <TableHead className="min-w-[10rem] bg-slate-50 py-2 px-3 text-xs">
                                     <button
                                         onClick={toggleSortOrder}
-                                        className="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0"
+                                        className="flex items-center gap-1 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0 text-xs"
                                     >
                                         受信日時
-                                        {sortOrder === 'none' && <ArrowUpDown className="size-3.5 text-slate-400" />}
-                                        {sortOrder === 'asc' && <ArrowUp className="size-3.5 text-blue-600" />}
-                                        {sortOrder === 'desc' && <ArrowDown className="size-3.5 text-blue-600" />}
+                                        {sortOrder === 'none' && <ArrowUpDown className="w-3 h-3 text-slate-400" />}
+                                        {sortOrder === 'asc' && <ArrowUp className="w-3 h-3 text-blue-600" />}
+                                        {sortOrder === 'desc' && <ArrowDown className="w-3 h-3 text-blue-600" />}
                                     </button>
                                 </TableHead>
-                                <TableHead className="min-w-[6.25rem] bg-slate-50">操作</TableHead>
+                                <TableHead className="min-w-[5rem] bg-slate-50 py-2 px-3 text-xs">操作</TableHead>
                             </TableRow>
                         </TableHeader>
                     </Table>
                 </div>
-                <div className="overflow-y-auto" style={{maxHeight: '37.5rem'}}>
+                <div className="overflow-y-auto" style={{maxHeight: '30rem'}}>
                     <Table>
                         <colgroup>
-                            <col className="min-w-[8.75rem]" />
-                            <col className="min-w-[15rem]" />
-                            <col className="min-w-[12.5rem]" />
-                            <col className="min-w-[6.25rem]" />
+                            <col className="min-w-[8rem]" />
+                            <col className="min-w-[12rem]" />
+                            <col className="min-w-[10rem]" />
+                            <col className="min-w-[5rem]" />
                         </colgroup>
                         <TableBody>
                             {currentDocuments.length === 0 ? (
@@ -357,8 +357,8 @@ export function DocumentList() {
                                         key={doc.id}
                                         className="hover:bg-slate-50 transition-colors cursor-pointer"
                                     >
-                                        <TableCell>
-                                            <div className="flex flex-col gap-2">
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex flex-col gap-1.5">
                                                 {getTypeBadge(doc.type)}
                                                 {doc.tags && doc.tags.length > 0 && (
                                                     <div className="flex flex-wrap gap-1">
@@ -366,7 +366,7 @@ export function DocumentList() {
                                                             <Badge
                                                                 key={tag}
                                                                 variant="outline"
-                                                                className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                                                                className="text-[0.65rem] py-0 px-1.5 bg-orange-50 text-orange-700 border-orange-200"
                                                             >
                                                                 {TAG_LABELS[tag as PredefinedTag] || tag}
                                                             </Badge>
@@ -375,18 +375,19 @@ export function DocumentList() {
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-slate-900">
+                                        <TableCell className="text-slate-900 py-2 px-3 text-xs">
                                             {doc.subject}
                                         </TableCell>
-                                        <TableCell className="text-slate-600">
+                                        <TableCell className="text-slate-600 py-2 px-3 text-xs">
                                             {doc.receivedAt}
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="py-2 px-3">
                                             <Button 
                                                 variant="outline" 
                                                 size="sm"
                                                 onClick={() => handleDownload(doc)}
                                                 disabled={!doc.fileUrl}
+                                                className="text-xs py-1 px-2 h-auto"
                                             >
                       開く
                                             </Button>
@@ -458,17 +459,17 @@ export function DocumentList() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 mt-6">
+                <div className="flex justify-center items-center gap-2 md:gap-4 mt-6">
                     <Button
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        className="flex items-center gap-2 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
+                        className="flex items-center gap-1 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 text-xs py-1.5 px-3"
                     >
             ← 前へ
                     </Button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         {Array.from({ length: totalPages }, (_, i) => i + 1)
                             .filter(
                                 (page) =>
@@ -477,15 +478,15 @@ export function DocumentList() {
                   Math.abs(page - currentPage) <= 1
                             )
                             .map((page, index, array) => (
-                                <div key={page} className="flex items-center gap-2">
+                                <div key={page} className="flex items-center gap-1.5">
                                     {index > 0 && array[index - 1] !== page - 1 && (
-                                        <span className="text-slate-400">...</span>
+                                        <span className="text-slate-400 text-xs">...</span>
                                     )}
                                     <Button
                                         variant={currentPage === page ? 'default' : 'outline'}
                                         size="sm"
                                         onClick={() => setCurrentPage(page)}
-                                        className={`min-w-[2.5rem] ${
+                                        className={`min-w-[2rem] text-xs py-1.5 px-2 ${
                                             currentPage === page
                                                 ? 'bg-slate-700 hover:bg-slate-800 text-white border-slate-700'
                                                 : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
@@ -503,7 +504,7 @@ export function DocumentList() {
                             setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                         }
                         disabled={currentPage === totalPages}
-                        className="flex items-center gap-2 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
+                        className="flex items-center gap-1 bg-white hover:bg-slate-50 border-slate-300 text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 text-xs py-1.5 px-3"
                     >
             次へ →
                     </Button>
