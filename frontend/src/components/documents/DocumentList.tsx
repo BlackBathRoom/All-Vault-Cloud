@@ -77,7 +77,7 @@ export function DocumentList() {
     const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [currentPage, setCurrentPage] = useState(1)
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none') // 受信日時のソート順
-    const itemsPerPage = 8 // 1ページあたりの表示件数
+    const itemsPerPage = 20 
 
     useEffect(() => {
         const load = async () => {
