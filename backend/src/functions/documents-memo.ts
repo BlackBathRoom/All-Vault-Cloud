@@ -1,109 +1,260 @@
-import {
+// backend/src/functions/documents-Memo.ts
+import type {
     APIGatewayProxyEventV2,
     APIGatewayProxyResultV2,
 } from 'aws-lambda'
-import { ScanCommand } from '@aws-sdk/lib-dynamodb'
-import { dynamoClient } from '../lib/dynamoClient'
-import { GetObjectCommand } from '@aws-sdk/client-s3'
-import { s3Client } from '../lib/s3Client'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-  
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+import {
+    DynamoDBDocumentClient,
+    GetCommand,
+    UpdateCommand,
+} from '@aws-sdk/lib-dynamodb'
+import { randomUUID } from 'crypto'
+
+const ddbClient = new DynamoDBClient({})
+const ddb = DynamoDBDocumentClient.from(ddbClient, {
+    marshallOptions: { removeUndefinedValues: true },
+})
+
 const DOCUMENTS_TABLE = process.env.DOCUMENTS_TABLE || 'Documents'
-const UPLOAD_BUCKET = process.env.UPLOAD_BUCKET || process.env.BUCKET_NAME || ''
-  
+
 const corsHeaders: Record<string, string> = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
 }
-  
-  type DocumentItem = {
+
+// DynamoDB に保存するメモ1件分
+type MemoItem = {
+    memoId: string
+    text: string
+    page: number | null
+    createdAt: string
+    updatedAt: string
+}
+
+// Documents テーブルのレコード（今回使うフィールドだけ）
+type DocumentRecord = {
     id: string
-    type?: 'fax' | 'email' | 'document'
-    subject?: string | null
-    from?: string | null
-    createdAt?: string
-    pdfKey?: string
-  }
-  
-  type DocumentDto = {
-    id: string
-    type: 'fax' | 'email' | 'document'
-    subject: string
-    sender: string
-    receivedAt: string
-    s3Key: string
-    fileUrl: string | null
-    fileSize: number | null
-  }
-  
+    memos?: MemoItem[]
+    latestMemoText?: string | null
+    latestMemoUpdatedAt?: string | null
+}
+
+/**
+ * HTTP メソッドを型安全に取り出すヘルパー
+ */
+const getHttpMethod = (event: APIGatewayProxyEventV2): string => {
+    if (event.requestContext) {
+        const rc = event.requestContext as {
+            http?: { method?: string }
+            httpMethod?: string
+        }
+
+        if (rc.http?.method) {
+            return rc.http.method.toUpperCase()
+        }
+
+        if (rc.httpMethod) {
+            return rc.httpMethod.toUpperCase()
+        }
+    }
+
+    if ('httpMethod' in event) {
+        const e = event as APIGatewayProxyEventV2 & { httpMethod?: string }
+        if (typeof e.httpMethod === 'string') {
+            return e.httpMethod.toUpperCase()
+        }
+    }
+
+    return 'GET'
+}
+
+/**
+ * パス:
+ *   /documents/{id}/memos
+ * パスパラメータ:
+ *   id: Documents.id
+ */
 export const handler = async (
     event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
-    try {
-        const method = event.requestContext.http.method
-  
-        if (method === 'OPTIONS') {
-            return { statusCode: 204, headers: corsHeaders, body: '' }
-        }
-  
-        if (method !== 'GET') {
-            return { statusCode: 405, headers: corsHeaders, body: 'Method Not Allowed' }
-        }
-  
-        // Documents テーブル全件（PoCなので Scan）
-        const res = await dynamoClient.send(
-            new ScanCommand({
-                TableName: DOCUMENTS_TABLE,
-            })
-        )
-  
-        const items = (res.Items ?? []) as DocumentItem[]
-  
-        const docs: DocumentDto[] = []
-        for (const item of items) {
-            if (!item.id || !item.pdfKey) continue
-    
-            const type: 'fax' | 'email' | 'document' =
-            item.type ?? 'fax'
-    
-            const subject = item.subject ?? '(件名なし)'
-            const sender = item.from ?? '(送信者不明)'
-            const receivedAt = item.createdAt ?? ''
-    
-            let fileUrl: string | null = null
-            if (UPLOAD_BUCKET && item.pdfKey) {
-                const cmd = new GetObjectCommand({
-                    Bucket: UPLOAD_BUCKET,
-                    Key: item.pdfKey,
-                })
-                fileUrl = await getSignedUrl(s3Client, cmd, { expiresIn: 3600 })
-            }
-  
-            docs.push({
-                id: item.id,
-                type,
-                subject,
-                sender,
-                receivedAt,
-                s3Key: item.pdfKey,
-                fileUrl,
-                fileSize: null, // 必要なら後で HeadObject などで取得
-            })
-        }
-    
+    console.log('event:', JSON.stringify(event))
+
+    const method = getHttpMethod(event)
+    console.log('🔎 resolved method =', method)
+
+    const documentId = event.pathParameters?.id
+
+    if (method === 'OPTIONS') {
+        return { statusCode: 204, headers: corsHeaders, body: '' }
+    }
+
+    if (!documentId) {
         return {
-            statusCode: 200,
+            statusCode: 400,
             headers: corsHeaders,
-            body: JSON.stringify({ documents: docs }),
+            body: 'documentId is required',
         }
-    } catch (err) {
+    }
+
+    try {
+        // ---------- GET /documents/{id}/memos ----------
+        if (method === 'GET') {
+            const res = await ddb.send(
+                new GetCommand({
+                    TableName: DOCUMENTS_TABLE,
+                    Key: { id: documentId },
+                    ProjectionExpression: 'memos',
+                })
+            )
+
+            const item = res.Item as DocumentRecord | undefined
+            const memos: MemoItem[] = item?.memos ?? []
+
+            return {
+                statusCode: 200,
+                headers: corsHeaders,
+                body: JSON.stringify(memos),
+            }
+        }
+
+        const body = event.body ? (JSON.parse(event.body) as unknown) : {}
+
+        // POST のリクエストボディ型
+        type PostBody =
+            | { mode?: undefined; text?: string; page?: number | null }
+            | { mode: 'delete'; memoId: string }
+
+        const req = body as PostBody
+
+        // ---------- POST /documents/{id}/memos（削除モード） ----------
+        if (method === 'POST' && req.mode === 'delete') {
+            console.log('🗑 delete memo request:', req)
+
+            const memoId = req.memoId
+            if (!memoId) {
+                return {
+                    statusCode: 400,
+                    headers: corsHeaders,
+                    body: 'memoId is required',
+                }
+            }
+
+            // 現在の memos を取得
+            const getRes = await ddb.send(
+                new GetCommand({
+                    TableName: DOCUMENTS_TABLE,
+                    Key: { id: documentId },
+                    ProjectionExpression: 'memos',
+                })
+            )
+
+            const item = getRes.Item as DocumentRecord | undefined
+            const currentMemos: MemoItem[] = (item?.memos ?? []).filter(
+                (m: MemoItem) => m.memoId !== memoId
+            )
+
+            // latestMemo を再計算
+            const last: MemoItem | null =
+                currentMemos.length > 0
+                    ? currentMemos[currentMemos.length - 1]
+                    : null
+
+            if (last) {
+                await ddb.send(
+                    new UpdateCommand({
+                        TableName: DOCUMENTS_TABLE,
+                        Key: { id: documentId },
+                        UpdateExpression:
+                            'SET memos = :m, latestMemoText = :text, latestMemoUpdatedAt = :updatedAt',
+                        ExpressionAttributeValues: {
+                            ':m': currentMemos,
+                            ':text': last.text,
+                            ':updatedAt': last.updatedAt,
+                        },
+                    })
+                )
+            } else {
+                // メモが1件もなくなったら latestMemo 系を削除
+                await ddb.send(
+                    new UpdateCommand({
+                        TableName: DOCUMENTS_TABLE,
+                        Key: { id: documentId },
+                        UpdateExpression:
+                            'SET memos = :m REMOVE latestMemoText, latestMemoUpdatedAt',
+                        ExpressionAttributeValues: {
+                            ':m': currentMemos,
+                        },
+                    })
+                )
+            }
+
+            return {
+                statusCode: 204,
+                headers: corsHeaders,
+                body: '',
+            }
+        }
+
+        // ---------- POST /documents/{id}/memos（通常のメモ追加） ----------
+        if (method === 'POST') {
+            const now = new Date().toISOString()
+
+            const text =
+                'text' in req && typeof req.text === 'string' ? req.text : ''
+            const page =
+                'page' in req && typeof req.page === 'number'
+                    ? req.page
+                    : null
+
+            const memo: MemoItem = {
+                memoId: randomUUID(),
+                text,
+                page,
+                createdAt: now,
+                updatedAt: now,
+            }
+
+            await ddb.send(
+                new UpdateCommand({
+                    TableName: DOCUMENTS_TABLE,
+                    Key: { id: documentId },
+                    UpdateExpression:
+                        'SET memos = list_append(if_not_exists(memos, :empty), :m), ' +
+                        'latestMemoText = :text, ' +
+                        'latestMemoUpdatedAt = :updatedAt',
+                    ExpressionAttributeValues: {
+                        ':empty': [] as MemoItem[],
+                        ':m': [memo],
+                        ':text': memo.text,
+                        ':updatedAt': memo.updatedAt,
+                    },
+                })
+            )
+
+            return {
+                statusCode: 201,
+                headers: corsHeaders,
+                body: JSON.stringify(memo),
+            }
+        }
+
+        // 他メソッドは 405
+        return {
+            statusCode: 405,
+            headers: corsHeaders,
+            body: 'Method Not Allowed',
+        }
+    } catch (err: unknown) {
         console.error(err)
         return {
             statusCode: 500,
             headers: corsHeaders,
-            body: JSON.stringify({ error: 'Internal Error', detail: String(err) }),
+            body: JSON.stringify({
+                error: 'Internal Server Error',
+                detail: err instanceof Error ? err.message : String(err),
+            }),
         }
     }
 }
-  
