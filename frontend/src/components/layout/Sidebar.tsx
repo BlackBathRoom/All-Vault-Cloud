@@ -1,7 +1,8 @@
-import { LayoutDashboard, FileText, Upload, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Upload, X, Search } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { Button } from '../ui/button';
 import { Link } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
 
 interface SidebarProps {
   currentView: string;
@@ -11,6 +12,15 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) => {
+  const [fontSize, setFontSize] = useState(100);
+
+  const handleFontSizeChange = (newSize: number) => {
+    setFontSize(newSize);
+    document.body.style.fontSize = `${newSize}%`;
+  };
+
+  const fontSizeOptions = [75, 100, 125, 150, 175, 200];
+
   const menuItems = [
     {
       id: 'dashboard',
@@ -88,6 +98,40 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
             );
           })}
         </nav>
+
+        {/* 文字サイズ調整 */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Search className="w-4 h-4" />
+                文字サイズ
+              </span>
+              <span className="text-sm font-bold text-blue-600">{fontSize}%</span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-2">
+              {fontSizeOptions.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => handleFontSizeChange(size)}
+                  className={cn(
+                    "py-2 px-3 rounded-lg font-medium text-sm transition-all",
+                    fontSize === size
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                  )}
+                >
+                  {size}%
+                </button>
+              ))}
+            </div>
+            
+            <div className="text-xs text-gray-500 text-center">
+              クリックして文字サイズを選択
+            </div>
+          </div>
+        </div>
       </aside>
     </>
   );
