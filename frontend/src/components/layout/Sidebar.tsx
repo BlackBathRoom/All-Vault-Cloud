@@ -55,24 +55,25 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
       
       {/* サイドバー */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col",
+        "w-64 min-w-[16rem]",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* ロゴエリア */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
-          <h1 className="text-[rgb(23,24,25)]">All Vault Cloud</h1>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
+          <h1 className="text-[rgb(23,24,25)] text-base md:text-lg whitespace-nowrap overflow-hidden text-ellipsis">All Vault Cloud</h1>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="bg-white hover:bg-gray-100"
+            className="bg-white hover:bg-gray-100 flex-shrink-0"
           >
             <X className="w-5 h-5 text-black" />
           </Button>
         </div>
 
         {/* メニュー */}
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -101,14 +102,14 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
         </nav>
 
         {/* 文字サイズ調整 */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Search className="w-4 h-4" />
-                文字サイズ
+                <Search className="w-4 h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">文字サイズ</span>
               </span>
-              <span className="text-sm font-bold text-blue-600">{fontSize}%</span>
+              <span className="text-sm font-bold text-blue-600 whitespace-nowrap">{fontSize}%</span>
             </div>
             
             <div className="grid grid-cols-3 gap-2">
@@ -117,7 +118,7 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
                   key={size}
                   onClick={() => handleFontSizeChange(size)}
                   className={cn(
-                    "py-2 px-3 rounded-lg font-medium text-sm transition-all",
+                    "py-2 px-3 rounded-lg font-medium text-sm transition-all whitespace-nowrap",
                     fontSize === size
                       ? "bg-blue-600 text-white shadow-md"
                       : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
