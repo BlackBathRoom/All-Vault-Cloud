@@ -11,6 +11,10 @@ export interface Document {
     fileUrl?: string    // 署名付きダウンロードURL
     fileSize?: number | null   // ファイルサイズ（bytes）
     memos?: DocumentMemo[] 
+    latestMemo: {
+        text: string
+        updatedAt: string
+      } | null
 }
 
 export type DocumentMemo = {
