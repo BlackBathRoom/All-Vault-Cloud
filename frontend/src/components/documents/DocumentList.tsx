@@ -563,8 +563,8 @@ export function DocumentList() {
                                                     }}
                                                     className={`h-8 w-8 p-0 flex-shrink-0 ${
                                                         doc.latestMemo 
-                                                            ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' 
-                                                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                                            ? 'text-slate-400 hover:text-blue-600 hover:bg-blue-50' 
+                                                            : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
                                                     }`}
                                                     title={doc.latestMemo ? 'メモを編集' : 'メモを追加'}
                                                 >
@@ -639,7 +639,7 @@ export function DocumentList() {
                             </h3>
                             {doc.latestMemo ? (
                                 <div className="mb-2 p-2 bg-slate-50 rounded text-xs text-slate-600 flex items-start gap-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                    <MessageSquare className="w-3.5 h-3.5 text-slate-600 flex-shrink-0 mt-0.5" />
                                     <div className="flex-1">{doc.latestMemo.text}</div>
                                     <Button
                                         size="sm"
@@ -648,7 +648,7 @@ export function DocumentList() {
                                             e.stopPropagation()
                                             openMemoDialog(doc)
                                         }}
-                                        className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50 flex-shrink-0"
+                                        className="h-6 w-6 p-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 flex-shrink-0"
                                     >
                                         <Edit3 className="w-3 h-3" />
                                     </Button>
@@ -661,7 +661,7 @@ export function DocumentList() {
                                         e.stopPropagation()
                                         openMemoDialog(doc)
                                     }}
-                                    className="mb-2 text-xs text-slate-500 hover:text-blue-600 hover:bg-blue-50 w-full justify-start"
+                                    className="mb-2 text-xs text-blue-500 hover:text-blue-600 hover:bg-blue-50 w-full justify-start"
                                 >
                                     <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
                                     メモを追加
