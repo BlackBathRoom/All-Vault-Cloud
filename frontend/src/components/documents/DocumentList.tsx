@@ -312,11 +312,17 @@ export function DocumentList() {
             <div className="hidden md:block bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <Table>
+                        <colgroup>
+                            <col style={{width: '8rem'}} />
+                            <col style={{width: 'auto'}} />
+                            <col style={{width: '10rem'}} />
+                            <col style={{width: '5rem'}} />
+                        </colgroup>
                         <TableHeader className="sticky top-0 z-10 bg-slate-50">
                             <TableRow className="bg-slate-50 text-xs">
-                                <TableHead className="min-w-[8rem] bg-slate-50 py-2 px-3 text-xs">種別</TableHead>
-                                <TableHead className="min-w-[12rem] bg-slate-50 py-2 px-3 text-xs">件名</TableHead>
-                                <TableHead className="min-w-[10rem] bg-slate-50 py-2 px-3 text-xs">
+                                <TableHead className="bg-slate-50 py-2 px-3 text-xs">種別</TableHead>
+                                <TableHead className="bg-slate-50 py-2 px-3 text-xs">件名</TableHead>
+                                <TableHead className="bg-slate-50 py-2 px-3 text-xs">
                                     <button
                                         onClick={toggleSortOrder}
                                         className="flex items-center gap-1 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0 text-xs"
@@ -327,7 +333,7 @@ export function DocumentList() {
                                         {sortOrder === 'desc' && <ArrowDown className="w-3 h-3 text-blue-600" />}
                                     </button>
                                 </TableHead>
-                                <TableHead className="min-w-[5rem] bg-slate-50 py-2 px-3 text-xs">操作</TableHead>
+                                <TableHead className="bg-slate-50 py-2 px-3 text-xs">操作</TableHead>
                             </TableRow>
                         </TableHeader>
                     </Table>
@@ -335,10 +341,10 @@ export function DocumentList() {
                 <div className="overflow-y-auto" style={{maxHeight: '30rem'}}>
                     <Table>
                         <colgroup>
-                            <col className="min-w-[8rem]" />
-                            <col className="min-w-[12rem]" />
-                            <col className="min-w-[10rem]" />
-                            <col className="min-w-[5rem]" />
+                            <col style={{width: '8rem'}} />
+                            <col style={{width: 'auto'}} />
+                            <col style={{width: '10rem'}} />
+                            <col style={{width: '5rem'}} />
                         </colgroup>
                         <TableBody>
                             {currentDocuments.length === 0 ? (
