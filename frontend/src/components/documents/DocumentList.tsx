@@ -314,9 +314,9 @@ export function DocumentList() {
                     <Table>
                         <TableHeader className="sticky top-0 z-10 bg-slate-50">
                             <TableRow className="bg-slate-50">
-                                <TableHead className="w-[140px] bg-slate-50">種別</TableHead>
-                                <TableHead className="bg-slate-50">件名</TableHead>
-                                <TableHead className="w-[200px] bg-slate-50">
+                                <TableHead className="min-w-[8.75rem] bg-slate-50">種別</TableHead>
+                                <TableHead className="min-w-[15rem] bg-slate-50">件名</TableHead>
+                                <TableHead className="min-w-[12.5rem] bg-slate-50">
                                     <button
                                         onClick={toggleSortOrder}
                                         className="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer bg-transparent hover:bg-transparent border-none outline-none p-0"
@@ -327,18 +327,18 @@ export function DocumentList() {
                                         {sortOrder === 'desc' && <ArrowDown className="size-3.5 text-blue-600" />}
                                     </button>
                                 </TableHead>
-                                <TableHead className="w-[100px] bg-slate-50">操作</TableHead>
+                                <TableHead className="min-w-[6.25rem] bg-slate-50">操作</TableHead>
                             </TableRow>
                         </TableHeader>
                     </Table>
                 </div>
-                <div className="overflow-y-auto" style={{maxHeight: '600px'}}>
+                <div className="overflow-y-auto" style={{maxHeight: '37.5rem'}}>
                     <Table>
                         <colgroup>
-                            <col style={{width: '140px'}} />
-                            <col />
-                            <col style={{width: '200px'}} />
-                            <col style={{width: '100px'}} />
+                            <col className="min-w-[8.75rem]" />
+                            <col className="min-w-[15rem]" />
+                            <col className="min-w-[12.5rem]" />
+                            <col className="min-w-[6.25rem]" />
                         </colgroup>
                         <TableBody>
                             {currentDocuments.length === 0 ? (
