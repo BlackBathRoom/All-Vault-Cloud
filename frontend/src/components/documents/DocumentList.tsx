@@ -28,7 +28,7 @@ import {
     TableRow,
 } from '../ui/table'
 import { Badge } from '../ui/badge'
-import { getDocuments } from '../../api/documentsApi'
+import { getDocuments, createDocumentMemo } from '../../api/documentsApi'
 import {
     Document,
     TAG_LABELS,
@@ -77,7 +77,12 @@ export function DocumentList() {
     const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [currentPage, setCurrentPage] = useState(1)
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none') // 受信日時のソート順
-    const itemsPerPage = 20 
+    const itemsPerPage = 20
+    
+    // メモ編集用の状態
+    const [editingMemoId, setEditingMemoId] = useState<string | null>(null)
+    const [memoText, setMemoText] = useState<string>('')
+    const [savingMemo, setSavingMemo] = useState<string | null>(null) 
 
     useEffect(() => {
         const load = async () => {
@@ -252,6 +257,46 @@ export function DocumentList() {
         const i = Math.floor(Math.log(bytes) / Math.log(1024))
         return `${Math.round((bytes / Math.pow(1024, i)) * 100) / 100} ${sizes[i]}`
     }
+    
+    // メモ編集開始
+    const startEditMemo = (doc: Document) => {
+        setEditingMemoId(doc.id)
+        setMemoText(doc.latestMemo?.text || '')
+    }
+    
+    // メモ保存
+    const saveMemo = async (docId: string) => {
+        if (!memoText.trim()) {
+            setEditingMemoId(null)
+            return
+        }
+        
+        try {
+            setSavingMemo(docId)
+            await createDocumentMemo(docId, { text: memoText.trim() })
+            
+            // ローカル状態を更新
+            setDocuments(prev => prev.map(doc => 
+                doc.id === docId 
+                    ? { ...doc, latestMemo: { text: memoText.trim(), updatedAt: new Date().toISOString() } }
+                    : doc
+            ))
+            
+            setEditingMemoId(null)
+            setMemoText('')
+        } catch (error) {
+            console.error('メモの保存に失敗:', error)
+            alert('メモの保存に失敗しました')
+        } finally {
+            setSavingMemo(null)
+        }
+    }
+    
+    // メモ編集キャンセル
+    const cancelEditMemo = () => {
+        setEditingMemoId(null)
+        setMemoText('')
+    }
 
     // ページネーション計算
     const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage)
@@ -373,6 +418,7 @@ export function DocumentList() {
                         <colgroup>
                             <col style={{ width: '8rem' }} />
                             <col style={{ width: 'auto' }} />
+                            <col style={{ width: '15rem' }} />
                             <col style={{ width: '10rem' }} />
                             <col style={{ width: '5rem' }} />
                         </colgroup>
@@ -383,6 +429,9 @@ export function DocumentList() {
                                 </TableHead>
                                 <TableHead className="bg-slate-50 py-2 px-3 text-xs">
                                     件名
+                                </TableHead>
+                                <TableHead className="bg-slate-50 py-2 px-3 text-xs">
+                                    メモ
                                 </TableHead>
                                 <TableHead className="bg-slate-50 py-2 px-3 text-xs">
                                     <button
@@ -413,6 +462,7 @@ export function DocumentList() {
                         <colgroup>
                             <col style={{ width: '8rem' }} />
                             <col style={{ width: 'auto' }} />
+                            <col style={{ width: '15rem' }} />
                             <col style={{ width: '10rem' }} />
                             <col style={{ width: '5rem' }} />
                         </colgroup>
@@ -420,7 +470,7 @@ export function DocumentList() {
                             {currentDocuments.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={4}
+                                        colSpan={5}
                                         className="text-center py-12 text-slate-500"
                                     >
                                         <FileText className="size-12 mx-auto mb-3 text-slate-300" />
@@ -454,6 +504,53 @@ export function DocumentList() {
                                         <TableCell className="text-slate-900 py-2 px-3 text-xs">
                                             {/* ✅ ファイル名だけ表示 */}
                                             {getDisplaySubject(doc.subject)}
+                                        </TableCell>
+                                        <TableCell className="py-2 px-3 text-xs">
+                                            {editingMemoId === doc.id ? (
+                                                <div className="flex gap-1 items-center">
+                                                    <Input
+                                                        type="text"
+                                                        value={memoText}
+                                                        onChange={(e) => setMemoText(e.target.value)}
+                                                        placeholder="メモを入力..."
+                                                        className="h-7 text-xs"
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                saveMemo(doc.id)
+                                                            } else if (e.key === 'Escape') {
+                                                                cancelEditMemo()
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => saveMemo(doc.id)}
+                                                        disabled={savingMemo === doc.id}
+                                                        className="h-7 px-2 text-xs"
+                                                    >
+                                                        {savingMemo === doc.id ? '保存中...' : '保存'}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={cancelEditMemo}
+                                                        className="h-7 px-2 text-xs"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div 
+                                                    className="text-slate-600 truncate max-w-[15rem] cursor-pointer hover:bg-slate-50 px-2 py-1 rounded"
+                                                    title={doc.latestMemo?.text || 'クリックしてメモを追加'}
+                                                    onClick={() => startEditMemo(doc)}
+                                                >
+                                                    {doc.latestMemo?.text || (
+                                                        <span className="text-slate-400 text-xs">メモを追加...</span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-slate-600 py-2 px-3 text-xs">
                                             {doc.receivedAt}
@@ -520,6 +617,52 @@ export function DocumentList() {
                             <h3 className="text-slate-900 mb-2">
                                 {getDisplaySubject(doc.subject)}
                             </h3>
+                            <div className="mb-2">
+                                {editingMemoId === doc.id ? (
+                                    <div className="p-2 bg-slate-50 rounded space-y-2">
+                                        <Input
+                                            type="text"
+                                            value={memoText}
+                                            onChange={(e) => setMemoText(e.target.value)}
+                                            placeholder="メモを入力..."
+                                            className="text-xs"
+                                            autoFocus
+                                        />
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                onClick={() => saveMemo(doc.id)}
+                                                disabled={savingMemo === doc.id}
+                                                className="flex-1 text-xs"
+                                            >
+                                                {savingMemo === doc.id ? '保存中...' : '保存'}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={cancelEditMemo}
+                                                className="text-xs"
+                                            >
+                                                キャンセル
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div 
+                                        className="p-2 bg-slate-50 rounded text-xs text-slate-600 cursor-pointer hover:bg-slate-100"
+                                        onClick={() => startEditMemo(doc)}
+                                    >
+                                        {doc.latestMemo ? (
+                                            <>
+                                                <span className="text-slate-500 font-medium">メモ: </span>
+                                                {doc.latestMemo.text}
+                                            </>
+                                        ) : (
+                                            <span className="text-slate-400">メモを追加...</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <div className="space-y-1 text-sm">
                                 <p className="text-slate-600">
                                     <span className="text-slate-500">受信日時:</span>{' '}
