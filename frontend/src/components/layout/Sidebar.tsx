@@ -1,4 +1,5 @@
-import { LayoutDashboard, FileText, Upload, X } from 'lucide-react'
+import { useState } from 'react'
+import { LayoutDashboard, FileText, Upload, X, Type } from 'lucide-react'
 import { cn } from '../ui/utils'
 import { Button } from '../ui/button'
 import { Link } from 'react-router-dom'
@@ -105,7 +106,7 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Search className="w-4 h-4 flex-shrink-0" />
+                <Type className="w-4 h-4 flex-shrink-0" />
                 <span className="whitespace-nowrap">文字サイズ</span>
               </span>
               <span className="text-sm font-bold text-blue-600 whitespace-nowrap">{fontSize}%</span>
