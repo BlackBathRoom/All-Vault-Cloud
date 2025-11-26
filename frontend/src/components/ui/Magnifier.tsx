@@ -9,20 +9,24 @@ export function Magnifier({ isActive }: MagnifierProps) {
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [isVisible, setIsVisible] = useState(false)
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const animationFrameRef = useRef<number>()
+    const mouseMoveTimeoutRef = useRef<NodeJS.Timeout>()
 
     useEffect(() => {
         if (!isActive) {
             setIsVisible(false)
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current)
-            }
             return
         }
 
         const handleMouseMove = (e: MouseEvent) => {
-            setPosition({ x: e.clientX, y: e.clientY })
-            setIsVisible(true)
+            // マウス移動をデバウンス（50ms）
+            if (mouseMoveTimeoutRef.current) {
+                clearTimeout(mouseMoveTimeoutRef.current)
+            }
+            
+            mouseMoveTimeoutRef.current = setTimeout(() => {
+                setPosition({ x: e.clientX, y: e.clientY })
+                setIsVisible(true)
+            }, 50)
         }
 
         const handleMouseLeave = () => {
@@ -35,13 +39,13 @@ export function Magnifier({ isActive }: MagnifierProps) {
         return () => {
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseleave', handleMouseLeave)
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current)
+            if (mouseMoveTimeoutRef.current) {
+                clearTimeout(mouseMoveTimeoutRef.current)
             }
         }
     }, [isActive])
 
-    // リアルタイムで画面をキャプチャして拡大表示
+    // 画面をキャプチャして拡大表示（軽量化版）
     useEffect(() => {
         if (!isActive || !isVisible || !canvasRef.current) return
 
@@ -51,70 +55,67 @@ export function Magnifier({ isActive }: MagnifierProps) {
 
         const magnifierSize = 200
         const zoom = 2.5
-        const captureSize = magnifierSize / zoom
+
+        let isUpdating = false
+        let updateTimeout: NodeJS.Timeout
 
         const updateMagnifier = async () => {
+            if (isUpdating) return
+            isUpdating = true
+
             try {
-                // マウス位置周辺の要素を取得
-                const element = document.elementFromPoint(position.x, position.y)
-                if (!element) return
-
-                // その要素を含む最も近い親要素をキャプチャ
-                const targetElement = element.closest('div, td, th, p, span, button, a') || document.body
-
-                const rect = targetElement.getBoundingClientRect()
-                const elementCanvas = await html2canvas(targetElement as HTMLElement, {
-                    scale: 2,
+                // 画面全体をキャプチャ（低解像度）
+                const bodyCanvas = await html2canvas(document.body, {
+                    scale: 0.5, // 解像度を下げてパフォーマンス向上
                     useCORS: true,
                     logging: false,
                     allowTaint: true,
-                    backgroundColor: null,
-                    width: rect.width,
-                    height: rect.height,
-                    windowWidth: rect.width,
-                    windowHeight: rect.height,
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    windowWidth: window.innerWidth,
+                    windowHeight: window.innerHeight,
                 })
 
-                // マウス位置がその要素内のどこにあるかを計算
-                const relativeX = position.x - rect.left
-                const relativeY = position.y - rect.top
+                const captureSize = magnifierSize / zoom
                 
                 // キャンバスをクリア
                 ctx.clearRect(0, 0, magnifierSize, magnifierSize)
                 ctx.fillStyle = 'white'
                 ctx.fillRect(0, 0, magnifierSize, magnifierSize)
 
-                // 拡大して描画
-                const sourceX = Math.max(0, (relativeX * 2) - captureSize)
-                const sourceY = Math.max(0, (relativeY * 2) - captureSize)
+                // マウス位置を中心に拡大して描画
+                const sourceX = Math.max(0, (position.x * 0.5) - (captureSize * 0.5))
+                const sourceY = Math.max(0, (position.y * 0.5) - (captureSize * 0.5))
+                
+                ctx.imageSmoothingEnabled = true
+                ctx.imageSmoothingQuality = 'high'
                 
                 ctx.drawImage(
-                    elementCanvas,
+                    bodyCanvas,
                     sourceX,
                     sourceY,
-                    captureSize * 2,
-                    captureSize * 2,
+                    captureSize * 0.5,
+                    captureSize * 0.5,
                     0,
                     0,
                     magnifierSize,
                     magnifierSize
                 )
             } catch (error) {
-                // エラーは無視（パフォーマンスのため）
-            }
-
-            if (isActive && isVisible) {
-                animationFrameRef.current = requestAnimationFrame(updateMagnifier)
+                // エラーは無視
+            } finally {
+                isUpdating = false
             }
         }
 
         // 初回実行
         updateMagnifier()
 
+        // 200ms間隔で更新（パフォーマンス考慮）
+        updateTimeout = setInterval(updateMagnifier, 200)
+
         return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current)
-            }
+            clearInterval(updateTimeout)
         }
     }, [isActive, isVisible, position.x, position.y])
 
