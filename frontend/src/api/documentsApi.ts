@@ -12,6 +12,8 @@ export type ApiDocument = {
   s3Key: string
   fileUrl: string | null
   fileSize: number | null
+  tags?: string[]
+  category?: string
   latestMemo: {
     text: string
     updatedAt: string
@@ -78,6 +80,8 @@ export const getDocuments = async (): Promise<Document[]> => {
             s3Key: d.s3Key,
             fileUrl: d.fileUrl ?? undefined,
             fileSize: d.fileSize ?? undefined,
+            tags: d.tags,
+            category: d.category,
 
             // 空メモは null 扱いにする
             latestMemo:
