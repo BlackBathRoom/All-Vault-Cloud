@@ -85,6 +85,7 @@ export class FaxMailCloudStack extends cdk.Stack {
             environment: {
                 BUCKET_NAME: faxSystemBucket.bucketName,
                 TABLE_NAME: documentsTable.tableName,
+                TAGS_LAMBDA_NAME: 'avc-api-tags',
                 REGION: this.region,
                 NODE_OPTIONS: '--enable-source-maps',
             },
@@ -148,6 +149,15 @@ export class FaxMailCloudStack extends cdk.Stack {
         faxSystemBucket.grantWrite(mailIngestFunction, 'emails/text/*')
         faxSystemBucket.grantWrite(mailIngestFunction, 'docs/email/*')
         documentsTable.grantReadWriteData(mailIngestFunction)
+        
+        // MailIngestFunction: avc-api-tags Lambda呼び出し権限
+        mailIngestFunction.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['lambda:InvokeFunction'],
+                resources: [`arn:aws:lambda:${this.region}:${this.account}:function:avc-api-tags`],
+            })
+        )
 
         // ApiHandlerFunction: 全prefix読み取り、uploads/raw/ への書き込み(presigned URL用)
         faxSystemBucket.grantRead(apiHandlerFunction)
