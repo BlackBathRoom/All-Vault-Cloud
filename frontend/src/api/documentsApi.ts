@@ -81,7 +81,7 @@ export const getDocuments = async (): Promise<Document[]> => {
             fileUrl: d.fileUrl ?? undefined,
             fileSize: d.fileSize ?? undefined,
             tags: d.tags,
-            category: d.category,
+            category: d.category as Document['category'],
 
             // 空メモは null 扱いにする
             latestMemo:
