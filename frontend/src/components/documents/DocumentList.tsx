@@ -79,6 +79,17 @@ const getDisplaySubject = (subject?: string): string => {
     return filenamePart
 }
 
+// 日時フォーマット関数（YYYY/MM/DD HH:mm形式）
+const formatDateTime = (dateString: string): string => {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}/${month}/${day} ${hours}:${minutes}`
+}
+
 export function DocumentList() {
     const [documents, setDocuments] = useState<Document[]>([])
     const [loading, setLoading] = useState(false)
@@ -573,7 +584,7 @@ export function DocumentList() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-slate-600 py-2 px-3 text-xs">
-                                            {doc.receivedAt}
+                                            {formatDateTime(doc.receivedAt)}
                                         </TableCell>
                                         <TableCell className="py-2 px-3">
                                             <Button
@@ -670,7 +681,7 @@ export function DocumentList() {
                             <div className="space-y-1 text-sm">
                                 <p className="text-slate-600">
                                     <span className="text-slate-500">受信日時:</span>{' '}
-                                    {doc.receivedAt}
+                                    {formatDateTime(doc.receivedAt)}
                                 </p>
                                 {doc.fileSize && (
                                     <p className="text-slate-600">

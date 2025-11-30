@@ -235,6 +235,70 @@ export const handler = async (
         }
 
         // -----------------------
+        // POST /emails/send (メール送信)
+        // -----------------------
+        if (method === 'POST' && path === '/emails/send') {
+            if (!event.body) {
+                return {
+                    statusCode: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'Body is required' }),
+                }
+            }
+
+            const body = JSON.parse(event.body) as {
+                to?: string
+                subject?: string
+                body?: string
+            }
+
+            if (!body.to || !body.subject || !body.body) {
+                return {
+                    statusCode: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: 'Missing required fields: to, subject, body' 
+                    }),
+                }
+            }
+
+            const SENDER_EMAIL = process.env.SENDER_EMAIL || ''
+
+            const { SendEmailCommand } = await import('@aws-sdk/client-ses')
+            const { sesClient } = await import('../lib/sesClient')
+
+            const command = new SendEmailCommand({
+                Source: SENDER_EMAIL,
+                Destination: {
+                    ToAddresses: [body.to],
+                },
+                Message: {
+                    Subject: {
+                        Data: body.subject,
+                        Charset: 'UTF-8',
+                    },
+                    Body: {
+                        Text: {
+                            Data: body.body,
+                            Charset: 'UTF-8',
+                        },
+                    },
+                },
+            })
+
+            await sesClient.send(command)
+
+            return {
+                statusCode: 200,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                body: JSON.stringify({ message: 'Email sent successfully' }),
+            }
+        }
+
+        // -----------------------
         // POST /documents/{id}/classify (AI自動分類)
         // -----------------------
         if (method === 'POST' && path.match(/^\/documents\/[^/]+\/classify$/)) {

@@ -4,10 +4,14 @@ import { dynamoClient } from '../lib/dynamoClient'
 import { parseEmail } from '../lib/mailParser'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { PutCommand } from '@aws-sdk/lib-dynamodb'
+import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
 import { v4 as uuidv4 } from 'uuid'
 
 const BUCKET_NAME = process.env.BUCKET_NAME || ''
 const TABLE_NAME = process.env.TABLE_NAME || ''
+const TAGS_LAMBDA_NAME = process.env.TAGS_LAMBDA_NAME || 'avc-api-tags'
+
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'ap-northeast-1' })
 
 // backend/src/functions/mail-ingest.ts
 
@@ -67,7 +71,38 @@ export const handler = async (event: SESEvent) => {
 
             await dynamoClient.send(putCommand)
 
-            console.log(`Email ingested: ${messageId}`)
+            console.log(`Email ingested: ${messageId}, Document ID: ${documentId}`)
+
+            // 🤖 AI自動分類を非同期で実行
+            try {
+                console.log(`🤖 Starting AI classification for document: ${documentId}`)
+                
+                const classifyPayload = {
+                    requestContext: {
+                        http: {
+                            method: 'POST',
+                            path: `/documents/${documentId}/classify`
+                        }
+                    },
+                    pathParameters: {
+                        id: documentId
+                    }
+                }
+
+                const invokeCommand = new InvokeCommand({
+                    FunctionName: TAGS_LAMBDA_NAME,
+                    InvocationType: 'Event', // 非同期実行
+                    Payload: JSON.stringify(classifyPayload)
+                })
+
+                await lambdaClient.send(invokeCommand)
+                console.log(`✅ AI classification triggered for document: ${documentId}`)
+            } catch (classifyError) {
+                // 分類エラーは記録するが、メール取り込み自体は成功とする
+                console.error('⚠️ Classification trigger failed:', classifyError)
+            }
+
+            console.log(`✅ Email processing completed: ${messageId}`)
         } catch (error) {
             console.error('Error ingesting email:', error)
             throw error
