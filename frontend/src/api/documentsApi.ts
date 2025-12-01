@@ -144,3 +144,31 @@ export const deleteDocumentMemo = async (
         throw new Error('メモの削除に失敗しました')
     }
 }
+
+// ----------------------
+// メモ更新 POST /documents/{id}/memos (mode: update)
+// ----------------------
+export const updateDocumentMemo = async (
+    documentId: string,
+    memoId: string,
+    input: { text: string; page?: number | null }
+): Promise<DocumentMemo> => {
+    try {
+        const payload = {
+            mode: 'update',
+            memoId,
+            text: input.text,
+            page: input.page ?? null,
+        }
+
+        const response = await apiClient.post(
+            `/documents/${documentId}/memos`,
+            payload
+        )
+
+        return unwrapData<DocumentMemo>(response)
+    } catch (error) {
+        console.error('❌ メモ更新エラー:', error)
+        throw new Error('メモの更新に失敗しました')
+    }
+}

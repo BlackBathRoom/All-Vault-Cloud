@@ -170,95 +170,35 @@ export const handler = async (
         const body = event.body ? (JSON.parse(event.body) as unknown) : {}
 
         // POST のリクエストボディ型
-        type PostBody =
-            | { mode?: undefined; text?: string; page?: number | null }
-            | { mode: 'delete'; memoId: string }
+        type DeleteBody = { mode: 'delete'; memoId: string }
+        type UpdateBody = {
+            mode: 'update'
+            memoId: string
+            text: string
+            page?: number | null
+        }
+        type CreateBody = {
+            mode?: undefined
+            text?: string
+            page?: number | null
+        }
+
+        type PostBody = DeleteBody | UpdateBody | CreateBody
 
         const req = body as PostBody
 
-        // ---------- POST /documents/{id}/memos（削除モード） ----------
-        if (method === 'POST' && req.mode === 'delete') {
-            console.log('🗑 delete memo request:', req)
-
-            const memoId = req.memoId
-            if (!memoId) {
-                return {
-                    statusCode: 400,
-                    headers: corsHeaders,
-                    body: 'memoId is required',
-                }
-            }
-
-            // 現在の memos を取得
-            const getRes = await ddb.send(
-                new GetCommand({
-                    TableName: DOCUMENTS_TABLE,
-                    Key: { id: documentId },
-                    ProjectionExpression: 'memos',
-                })
-            )
-
-            const item = getRes.Item as DocumentRecord | undefined
-            const currentMemos: MemoItem[] = (item?.memos ?? []).filter(
-                (m: MemoItem) => m.memoId !== memoId
-            )
-
-            // latestMemo を再計算
-            const last: MemoItem | null =
-                currentMemos.length > 0
-                    ? currentMemos[currentMemos.length - 1]
-                    : null
-
-            if (last) {
-                await ddb.send(
-                    new UpdateCommand({
-                        TableName: DOCUMENTS_TABLE,
-                        Key: { id: documentId },
-                        UpdateExpression:
-                            'SET memos = :m, latestMemoText = :text, latestMemoUpdatedAt = :updatedAt',
-                        ExpressionAttributeValues: {
-                            ':m': currentMemos,
-                            ':text': last.text,
-                            ':updatedAt': last.updatedAt,
-                        },
-                    })
-                )
-            } else {
-                // メモが1件もなくなったら latestMemo 系を削除
-                await ddb.send(
-                    new UpdateCommand({
-                        TableName: DOCUMENTS_TABLE,
-                        Key: { id: documentId },
-                        UpdateExpression:
-                            'SET memos = :m REMOVE latestMemoText, latestMemoUpdatedAt',
-                        ExpressionAttributeValues: {
-                            ':m': currentMemos,
-                        },
-                    })
-                )
-            }
-
-            return {
-                statusCode: 204,
-                headers: corsHeaders,
-                body: '',
-            }
-        }
-
-        // ---------- POST /documents/{id}/memos（通常のメモ追加） ----------
+        // ---------- POST /documents/{id}/memos ----------
         if (method === 'POST') {
-            const now = new Date().toISOString()
-
-            const text =
-                'text' in req && typeof req.text === 'string' ? req.text : ''
-            const page =
-                'page' in req && typeof req.page === 'number'
-                    ? req.page
-                    : null
-
-            // 🧹 ここがポイント：空メモなら「保存せず」「既存の空メモも削除」
-            if (!text || text.trim() === '') {
-                console.log('🧹 空メモ扱いとして既存の空メモを削除します')
+            // 🎯 1) 削除モード
+            if (req.mode === 'delete') {
+                const memoId = (req as DeleteBody).memoId
+                if (!memoId) {
+                    return {
+                        statusCode: 400,
+                        headers: corsHeaders,
+                        body: 'memoId is required',
+                    }
+                }
 
                 // 現在の memos を取得
                 const getRes = await ddb.send(
@@ -270,14 +210,115 @@ export const handler = async (
                 )
 
                 const item = getRes.Item as DocumentRecord | undefined
-                const rawMemos: MemoItem[] = item?.memos ?? []
-
-                // text が null/空のメモを全部除外
-                const cleanedMemos: MemoItem[] = rawMemos.filter(
-                    (m) => m.text && m.text.trim() !== ''
+                const currentMemos: MemoItem[] = (item?.memos ?? []).filter(
+                    (m: MemoItem) => m.memoId !== memoId
                 )
 
                 // latestMemo を再計算
+                const last: MemoItem | null =
+                    currentMemos.length > 0
+                        ? currentMemos[currentMemos.length - 1]
+                        : null
+
+                if (last) {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m, latestMemoText = :text, latestMemoUpdatedAt = :updatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': currentMemos,
+                                ':text': last.text,
+                                ':updatedAt': last.updatedAt,
+                            },
+                        })
+                    )
+                } else {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m REMOVE latestMemoText, latestMemoUpdatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': currentMemos,
+                            },
+                        })
+                    )
+                }
+
+                return {
+                    statusCode: 204,
+                    headers: corsHeaders,
+                    body: '',
+                }
+            }
+
+            // ✏️ 2) 更新モード
+            if (req.mode === 'update') {
+                const { memoId, text, page } = req as UpdateBody
+
+                if (!memoId) {
+                    return {
+                        statusCode: 400,
+                        headers: corsHeaders,
+                        body: 'memoId is required',
+                    }
+                }
+
+                if (!text || text.trim() === '') {
+                    return {
+                        statusCode: 400,
+                        headers: corsHeaders,
+                        body: 'text is required',
+                    }
+                }
+
+                const now = new Date().toISOString()
+
+                // 現在の memos を取得
+                const getRes = await ddb.send(
+                    new GetCommand({
+                        TableName: DOCUMENTS_TABLE,
+                        Key: { id: documentId },
+                        ProjectionExpression: 'memos',
+                    })
+                )
+
+                const item = getRes.Item as DocumentRecord | undefined
+                const currentMemos: MemoItem[] = item?.memos ?? []
+
+                const index = currentMemos.findIndex(
+                    (m: MemoItem) => m.memoId === memoId
+                )
+
+                if (index === -1) {
+                    return {
+                        statusCode: 404,
+                        headers: corsHeaders,
+                        body: 'memo not found',
+                    }
+                }
+
+                const updatedMemo: MemoItem = {
+                    ...currentMemos[index],
+                    text,
+                    page: typeof page === 'number'
+                        ? page
+                        : currentMemos[index].page ?? null,
+                    updatedAt: now,
+                }
+
+                const updatedMemos: MemoItem[] = [...currentMemos]
+                updatedMemos[index] = updatedMemo
+
+                // 空メモ掃除
+                const cleanedMemos: MemoItem[] = updatedMemos.filter(
+                    (m) => !isEmptyMemoText(m.text)
+                )
+
+                // latestMemo 再計算
                 const last: MemoItem | null =
                     cleanedMemos.length > 0
                         ? cleanedMemos[cleanedMemos.length - 1]
@@ -311,7 +352,76 @@ export const handler = async (
                     )
                 }
 
-                // 新しいメモは作らず終了
+                return {
+                    statusCode: 200,
+                    headers: corsHeaders,
+                    body: JSON.stringify(updatedMemo),
+                }
+            }
+
+            // 🆕 3) ここまで来たら「新規作成モード」
+            const now = new Date().toISOString()
+            const createReq = req as CreateBody
+
+            const text =
+                typeof createReq.text === 'string' ? createReq.text : ''
+            const page =
+                typeof createReq.page === 'number'
+                    ? createReq.page
+                    : null
+
+            // 空メモは「掃除だけして終了」
+            if (!text || text.trim() === '') {
+                console.log('🧹 空メモ扱いとして既存の空メモを削除します')
+
+                const getRes = await ddb.send(
+                    new GetCommand({
+                        TableName: DOCUMENTS_TABLE,
+                        Key: { id: documentId },
+                        ProjectionExpression: 'memos',
+                    })
+                )
+
+                const item = getRes.Item as DocumentRecord | undefined
+                const rawMemos: MemoItem[] = item?.memos ?? []
+
+                const cleanedMemos: MemoItem[] = rawMemos.filter(
+                    (m) => m.text && m.text.trim() !== ''
+                )
+
+                const last: MemoItem | null =
+                    cleanedMemos.length > 0
+                        ? cleanedMemos[cleanedMemos.length - 1]
+                        : null
+
+                if (last) {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m, latestMemoText = :text, latestMemoUpdatedAt = :updatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': cleanedMemos,
+                                ':text': last.text,
+                                ':updatedAt': last.updatedAt,
+                            },
+                        })
+                    )
+                } else {
+                    await ddb.send(
+                        new UpdateCommand({
+                            TableName: DOCUMENTS_TABLE,
+                            Key: { id: documentId },
+                            UpdateExpression:
+                                'SET memos = :m REMOVE latestMemoText, latestMemoUpdatedAt',
+                            ExpressionAttributeValues: {
+                                ':m': [],
+                            },
+                        })
+                    )
+                }
+
                 return {
                     statusCode: 204,
                     headers: corsHeaders,
@@ -319,7 +429,6 @@ export const handler = async (
                 }
             }
 
-            // ここから先は「ちゃんと文字が入っているときだけ」実行される
             const memo: MemoItem = {
                 memoId: randomUUID(),
                 text,
@@ -351,6 +460,8 @@ export const handler = async (
                 body: JSON.stringify(memo),
             }
         }
+
+
 
 
         // 他メソッドは 405
