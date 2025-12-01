@@ -39,7 +39,13 @@ import {
     TableRow,
 } from '../ui/table'
 import { Badge } from '../ui/badge'
-import { getDocuments, createDocumentMemo } from '../../api/documentsApi'
+import {
+    getDocuments,
+    createDocumentMemo,
+    getDocumentMemos,
+    deleteDocumentMemo,
+    updateDocumentMemo,
+} from '../../api/documentsApi'
 import {
     Document,
     TAG_LABELS,
@@ -47,47 +53,66 @@ import {
     type PredefinedTag,
 } from '../../types/document'
 
+// DynamoDB の memos に合わせた型
+type DocumentMemo = {
+    memoId: string
+    text: string
+    page?: number | null
+    createdAt: string
+    updatedAt: string
+}
+
 // ✅ UUID_ファイル名（やパス付き）から表示用のファイル名だけを取り出す関数
 const getDisplaySubject = (subject?: string): string => {
     if (!subject) return ''
 
-    // もし "uploads/raw/UUID_サンプルtest" のようにパスが付いていたら最後の "/" 以降だけにする
     const lastSlashIndex = subject.lastIndexOf('/')
     const filenamePart =
         lastSlashIndex >= 0 ? subject.slice(lastSlashIndex + 1) : subject
 
-    // 先頭の "UUID_" を取り除く
     const underscoreIndex = filenamePart.indexOf('_')
     if (underscoreIndex === -1) {
-        // "_" がなければそのまま件名として扱う
         return filenamePart
     }
 
     const prefix = filenamePart.slice(0, underscoreIndex)
     const rest = filenamePart.slice(underscoreIndex + 1)
 
-    // UUID 形式かどうかチェック（8-4-4-4-12 の16進数）
     const uuidRegex =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
     if (uuidRegex.test(prefix)) {
-        // "UUID_..." 形式なら "_" 以降だけを表示用件名として返す
         return rest
     }
 
-    // それ以外（普通の件名）はそのまま
     return filenamePart
 }
 
 // 日時フォーマット関数（YYYY/MM/DD HH:mm形式）
 const formatDateTime = (dateString: string): string => {
+    if (!dateString) return ''
+
     const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return dateString
+
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
+
     return `${year}/${month}/${day} ${hours}:${minutes}`
+}
+
+// メモ更新日時表示用（末尾に「 更新」をつける）
+const formatMemoUpdatedAt = (isoString: string): string => {
+    if (!isoString) return ''
+
+    // 基本のフォーマットは共通関数を利用
+    const base = formatDateTime(isoString)
+    if (!base) return ''
+
+    return `${base} 更新`
 }
 
 export function DocumentList() {
@@ -98,25 +123,36 @@ export function DocumentList() {
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [currentPage, setCurrentPage] = useState(1)
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none') // 受信日時のソート順
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none')
     const itemsPerPage = 20
-    
-    // メモダイアログ用の状態
+
+    // メモダイアログ用
     const [memoDialogOpen, setMemoDialogOpen] = useState(false)
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
     const [memoText, setMemoText] = useState<string>('')
     const [savingMemo, setSavingMemo] = useState(false)
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false) 
+    const [editingMemoId, setEditingMemoId] = useState<string | null>(null)
+
+    // テーブルビュー用：メモ一覧ホバー表示
+    const [hoveredDocId, setHoveredDocId] = useState<string | null>(null)
+    const [hoverMemos, setHoverMemos] = useState<Record<string, DocumentMemo[]>>(
+        {},
+    )
+    const [hoverLoadingId, setHoverLoadingId] = useState<string | null>(null)
+    const [hoverErrorId, setHoverErrorId] = useState<string | null>(null)
+
+    // ダイアログ内で使う読み込み状態（共通で使い回し）
+    const [dialogLoading, setDialogLoading] = useState(false)
+    const [dialogError, setDialogError] = useState<string | null>(null)
 
     useEffect(() => {
         const load = async () => {
             try {
                 console.log('📡 API読み込み開始...')
                 setLoading(true)
-                const data = await getDocuments() // 全件取得
+                const data = await getDocuments()
                 console.log('📥 取得したデータ:', data)
                 console.log('📊 データ件数:', data.length)
-                // タグ情報のデバッグ
                 data.forEach((doc, idx) => {
                     if (doc.tags) {
                         console.log(
@@ -129,9 +165,7 @@ export function DocumentList() {
                 console.log('✅ データセット完了. documents.length:', data.length)
                 setLoading(false)
             } catch (error) {
-
                 console.error('❌ API読み込みエラー:', error)
-
                 setLoading(false)
             }
         }
@@ -154,7 +188,6 @@ export function DocumentList() {
             fax: {
                 label: 'FAX',
                 className:
-
                     'bg-green-100 text-green-700 border-green-200 hover:bg-green-100',
             },
             email: {
@@ -167,9 +200,9 @@ export function DocumentList() {
                 className:
                     'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100',
             },
-        }
+        } as const
 
-        const { label, className } = config[type as keyof typeof config]
+        const { label, className } = config[type]
         return (
             <Badge variant="outline" className={`gap-1 ${className}`}>
                 {getTypeIcon(type)}
@@ -183,30 +216,27 @@ export function DocumentList() {
         setSelectedTags(prev =>
             prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag],
         )
-        setCurrentPage(1) // フィルター変更時はページをリセット
+        setCurrentPage(1)
     }
 
     // 受信日時のソート切り替え
     const toggleSortOrder = () => {
         setSortOrder(prev => {
-            if (prev === 'none') return 'desc' // 最初は降順（新しい順）
-            if (prev === 'desc') return 'asc' // 次は昇順（古い順）
-            return 'none' // 最後はソート解除
+            if (prev === 'none') return 'desc'
+            if (prev === 'desc') return 'asc'
+            return 'none'
         })
-        setCurrentPage(1) // ソート変更時はページをリセット
+        setCurrentPage(1)
     }
 
     // フィルタ＆検索
     let filteredDocuments = documents.filter(doc => {
         const matchesType = filterType === 'all' || doc.type === filterType
-
-        // ✅ 検索対象も UUID を削った「表示用件名」で行う
         const displaySubject = getDisplaySubject(doc.subject)
         const matchesSearch =
             searchQuery === '' ||
             displaySubject.toLowerCase().includes(searchQuery.toLowerCase())
 
-        // タグフィルター
         let matchesTags = true
         if (selectedTags.length > 0) {
             if (!doc.tags || !Array.isArray(doc.tags) || doc.tags.length === 0) {
@@ -218,21 +248,7 @@ export function DocumentList() {
             }
         }
 
-        const result = matchesType && matchesSearch && matchesTags
-
-        // デバッグ: フィルター対象の最初の文書をログ出力
-        if (selectedTags.length > 0 && doc.tags && doc.tags.length > 0) {
-            console.log('🔍 Checking doc:', {
-                subject: doc.subject,
-                displaySubject,
-                docTags: doc.tags,
-                selectedTags,
-                matchesTags,
-                result,
-            })
-        }
-
-        return result
+        return matchesType && matchesSearch && matchesTags
     })
 
     // 受信日時でソート
@@ -244,19 +260,11 @@ export function DocumentList() {
         })
     }
 
-    // デバッグ情報
     console.log('📊 フィルタ状況:', {
         documents: documents.length,
         selectedTags,
-        selectedTagsDetail: selectedTags.map(t => `"${t}"`),
         documentsWithTags: documents.filter(d => d.tags && d.tags.length > 0)
             .length,
-        sampleDocTags: documents
-            .filter(d => d.tags && d.tags.length > 0)
-            .map(d => ({
-                subject: d.subject,
-                tags: d.tags,
-            })),
         filterType,
         searchQuery,
         filteredDocuments: filteredDocuments.length,
@@ -266,7 +274,6 @@ export function DocumentList() {
     const handleDownload = (document: Document) => {
         if (document.fileUrl) {
             console.log('📅 ファイルダウンロード:', document.subject)
-            // 署名付きURLで直接ダウンロード
             window.open(document.fileUrl, '_blank')
         } else {
             console.warn('⚠️ ダウンロードURLが見つかりません:', document)
@@ -274,75 +281,120 @@ export function DocumentList() {
         }
     }
 
-    // ファイルサイズを読みやすく表示する関数
+    // ファイルサイズ表示
     const formatFileSize = (bytes: number | null | undefined): string => {
         if (!bytes || bytes === 0) return '-'
         const sizes = ['B', 'KB', 'MB', 'GB']
         const i = Math.floor(Math.log(bytes) / Math.log(1024))
         return `${Math.round((bytes / Math.pow(1024, i)) * 100) / 100} ${sizes[i]}`
     }
-    
-    // メモダイアログを開く
+
+    // ★ 共通：メモ一覧読み込み（ホバー・ダイアログ両方から使用）
+    const loadMemos = async (docId: string, options?: { force?: boolean }) => {
+        if (!options?.force && hoverMemos[docId]) return
+
+        setHoverLoadingId(docId)
+        setHoverErrorId(null)
+        setDialogLoading(true)
+        setDialogError(null)
+
+        try {
+            const memos = (await getDocumentMemos(docId)) as DocumentMemo[]
+            setHoverMemos(prev => ({ ...prev, [docId]: memos }))
+
+            // latestMemo もここで同期しておく
+            const last = memos.length ? memos[memos.length - 1] : null
+            setDocuments(prev =>
+                prev.map(doc =>
+                    doc.id === docId
+                        ? {
+                            ...doc,
+                            latestMemo: last
+                                ? { text: last.text, updatedAt: last.updatedAt }
+                                : null,
+                        }
+                        : doc,
+                ),
+            )
+        } catch (e) {
+            console.error('メモ取得エラー:', e)
+            setHoverErrorId(docId)
+            setDialogError('メモの取得に失敗しました')
+        } finally {
+            setHoverLoadingId(null)
+            setDialogLoading(false)
+        }
+    }
+
+    // ホバー開始
+    const handleMemoMouseEnter = (doc: Document) => {
+        setHoveredDocId(doc.id)
+        void loadMemos(doc.id)
+    }
+
+    // ホバー終了
+    const handleMemoMouseLeave = () => {
+        setHoveredDocId(null)
+    }
+
+    // メモダイアログを開く（クリック時）
     const openMemoDialog = (doc: Document) => {
         setSelectedDoc(doc)
-        setMemoText(doc.latestMemo?.text || '')
+        setMemoText('')
         setMemoDialogOpen(true)
+        void loadMemos(doc.id, { force: true })
     }
-    
-    // メモ保存
+
+    // メモ保存（新規 or 更新）
     const saveMemo = async () => {
-        if (!selectedDoc || !memoText.trim()) {
-            setMemoDialogOpen(false)
-            return
-        }
-        
+        if (!selectedDoc || !memoText.trim()) return
+    
         try {
             setSavingMemo(true)
-            await createDocumentMemo(selectedDoc.id, { text: memoText.trim() })
-            
-            // ローカル状態を更新
-            setDocuments(prev => prev.map(doc => 
-                doc.id === selectedDoc.id 
-                    ? { ...doc, latestMemo: { text: memoText.trim(), updatedAt: new Date().toISOString() } }
-                    : doc
-            ))
-            
-            setMemoDialogOpen(false)
-            setSelectedDoc(null)
+    
+            if (editingMemoId) {
+                // 🔁 ここで更新APIを呼ぶ
+                await updateDocumentMemo(selectedDoc.id, editingMemoId, {
+                    text: memoText.trim(),
+                })
+            } else {
+                // 🆕 新規作成
+                await createDocumentMemo(selectedDoc.id, { text: memoText.trim() })
+            }
+    
+            await loadMemos(selectedDoc.id, { force: true })
             setMemoText('')
-        } catch (error) {
-            console.error('メモの保存に失敗:', error)
-            alert('メモの保存に失敗しました')
+            setEditingMemoId(null)
         } finally {
             setSavingMemo(false)
         }
     }
     
-    // メモダイアログを閉じる
     const closeMemoDialog = () => {
         setMemoDialogOpen(false)
         setSelectedDoc(null)
         setMemoText('')
-        setShowDeleteConfirm(false)
+        setDialogError(null)
+        setEditingMemoId(null)
     }
-    
-    // メモ削除
-    const deleteMemo = async () => {
-        if (!selectedDoc) return
-        
+
+    // 過去メモの編集開始
+    const startEditMemo = (memo: DocumentMemo) => {
+        setEditingMemoId(memo.memoId)
+        setMemoText(memo.text) // 下のテキストエリアに反映
+    }
+
+
+    // 一覧から個別メモ削除（ホバー／ダイアログ共通）
+    const handleDeleteMemoFromList = async (docId: string, memoId: string) => {
+        const ok = window.confirm('このメモを削除しますか？')
+        if (!ok) return
+
         try {
             setSavingMemo(true)
-            // ローカル状態を更新（メモを削除）
-            setDocuments(prev => prev.map(doc => 
-                doc.id === selectedDoc.id 
-                    ? { ...doc, latestMemo: null }
-                    : doc
-            ))
-            
-            setMemoDialogOpen(false)
-            setSelectedDoc(null)
-            setMemoText('')
-            setShowDeleteConfirm(false)
+            await deleteDocumentMemo(docId, memoId)
+            // 再取得して hoverMemos と latestMemo を同期
+            await loadMemos(docId, { force: true })
         } catch (error) {
             console.error('メモの削除に失敗:', error)
             alert('メモの削除に失敗しました')
@@ -357,7 +409,6 @@ export function DocumentList() {
     const endIndex = startIndex + itemsPerPage
     const currentDocuments = filteredDocuments.slice(startIndex, endIndex)
 
-    // フィルター・検索変更時にページをリセット
     useEffect(() => {
         setCurrentPage(1)
     }, [filterType, searchQuery])
@@ -371,7 +422,6 @@ export function DocumentList() {
     }
 
     return (
-
         <div className="space-y-4 md:space-y-6 max-w-full overflow-hidden">
             {/* Page Title */}
             <div>
@@ -454,7 +504,6 @@ export function DocumentList() {
             </div>
 
             {/* Results Count */}
-
             <div className="text-xs md:text-sm text-slate-600 px-1">
                 {filteredDocuments.length}件の文書が見つかりました
                 {totalPages > 1 && (
@@ -555,32 +604,104 @@ export function DocumentList() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-slate-900 py-2 px-3 text-xs">
-                                            {/* ✅ ファイル名だけ表示 */}
                                             {getDisplaySubject(doc.subject)}
                                         </TableCell>
                                         <TableCell className="py-2 px-3 text-xs">
-                                            <div className="flex items-center gap-2">
-                                                {doc.latestMemo && (
-                                                    <div className="flex-1 truncate text-slate-600" title={doc.latestMemo.text}>
-                                                        {doc.latestMemo.text}
-                                                    </div>
-                                                )}
+                                            <div
+                                                className="relative inline-flex items-center"
+                                                onMouseEnter={() => handleMemoMouseEnter(doc)}
+                                                onMouseLeave={handleMemoMouseLeave}
+                                            >
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={(e) => {
+                                                    onClick={e => {
                                                         e.stopPropagation()
                                                         openMemoDialog(doc)
                                                     }}
-                                                    className={`h-8 w-8 p-0 flex-shrink-0 ${
-                                                        doc.latestMemo 
-                                                            ? 'text-slate-400 hover:text-blue-600 hover:bg-blue-50' 
-                                                            : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
-                                                    }`}
-                                                    title={doc.latestMemo ? 'メモを編集' : 'メモを追加'}
+                                                    className={`
+                                                        h-7 px-2 inline-flex items-center gap-1 rounded-full border text-xs
+                                                        ${
+                                    doc.latestMemo
+                                        // ✅ メモあり：やわらかい黄色系
+                                        ? 'bg-amber-100 text-amber-700 border-amber-500 hover:bg-amber-200 hover:text-amber-800'
+                                        // ✅ メモなし：グレーの点線枠＋「＋メモ」
+                                        : 'bg-slate-50 text-slate-500 border-dashed border-slate-300 hover:bg-slate-200'
+                                    }
+                                                    `}
+                                                    title={doc.latestMemo ? 'メモを表示/編集' : 'メモを追加'}
                                                 >
-                                                    <MessageSquare className="w-4 h-4" />
+                                                    <MessageSquare className="w-3.5 h-3.5" />
+                                                    <span className="hidden lg:inline">
+                                                        {doc.latestMemo ? 'メモあり' : 'メモ追加'}
+                                                    </span>
                                                 </Button>
+
+                                                {/* ホバー時：メモ一覧ポップアップ（一覧） */}
+                                                {hoveredDocId === doc.id && (
+                                                    <div className="absolute left-full top-0 ml-10 z-20 w-72 rounded-md border border-slate-200 bg-white shadow-lg p-2 text-xs">
+                                                        <div className="mb-1 flex items-center justify-between">
+                                                            <span className="font-semibold text-slate-700">
+                                                                メモ一覧
+                                                            </span>
+                                                        </div>
+
+                                                        {hoverLoadingId === doc.id && (
+                                                            <p className="text-slate-500">
+                                                                読み込み中...
+                                                            </p>
+                                                        )}
+
+                                                        {hoverErrorId === doc.id && (
+                                                            <p className="text-red-500">
+                                                                メモの取得に失敗しました
+                                                            </p>
+                                                        )}
+
+                                                        {hoverMemos[doc.id] &&
+                                                            hoverMemos[doc.id].length === 0 &&
+                                                            hoverLoadingId !== doc.id &&
+                                                            hoverErrorId !== doc.id && (
+                                                            <p className="text-slate-500">
+                                                                メモは登録されていません
+                                                            </p>
+                                                        )}
+
+                                                        {hoverMemos[doc.id] &&
+                                                            hoverMemos[doc.id].length > 0 && (
+                                                            <ul className="space-y-1 max-h-60 overflow-y-auto">
+                                                                {hoverMemos[doc.id].map(memo => (
+                                                                    <li
+                                                                        key={memo.memoId}
+                                                                        className="flex items-start gap-2 rounded border border-slate-200 bg-slate-50 px-2 py-1"
+                                                                    >
+                                                                        <div className="flex-1">
+                                                                            <p className="whitespace-pre-wrap text-slate-700">
+                                                                                {memo.text}
+                                                                            </p>
+                                                                            <p className="mt-1">
+                                                                                <span
+                                                                                    className="
+                                                                                        inline-flex items-center
+                                                                                        rounded-full
+                                                                                        bg-slate-50
+                                                                                        px-2 py-0.5
+                                                                                        text-[0.65rem]
+                                                                                        text-slate-500
+                                                                                        font-mono
+                                                                                        tracking-tight
+                                                                                    "
+                                                                                >
+                                                                                    {formatMemoUpdatedAt(memo.updatedAt)}
+                                                                                </span>
+                                                                            </p>
+                                                                        </div>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-slate-600 py-2 px-3 text-xs">
@@ -644,7 +765,6 @@ export function DocumentList() {
                                     開く
                                 </Button>
                             </div>
-                            {/* ✅ モバイルの件名表示もファイル名だけ */}
                             <h3 className="text-slate-900 mb-2">
                                 {getDisplaySubject(doc.subject)}
                             </h3>
@@ -655,11 +775,11 @@ export function DocumentList() {
                                     <Button
                                         size="sm"
                                         variant="ghost"
-                                        onClick={(e) => {
+                                        onClick={e => {
                                             e.stopPropagation()
                                             openMemoDialog(doc)
                                         }}
-                                        className="h-6 w-6 p-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 flex-shrink-0"
+                                        className="h-6 w-6 p-0 hover:text-slate-600 hover:bg-slate-300 text-blue-600 bg-blue-100 flex-shrink-0"
                                     >
                                         <Edit3 className="w-3 h-3" />
                                     </Button>
@@ -668,15 +788,21 @@ export function DocumentList() {
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={(e) => {
+                                    onClick={e => {
                                         e.stopPropagation()
                                         openMemoDialog(doc)
                                     }}
-                                    className="mb-2 text-xs text-blue-500 hover:text-blue-600 hover:bg-blue-50 w-full justify-start"
+                                    className="
+                                            mb-2 w-full justify-start text-xs
+                                            rounded-full border
+                                            bg-slate-50 text-slate-600 border-dashed border-slate-300
+                                            hover:bg-slate-100
+                                            "
                                 >
                                     <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
                                     メモを追加
                                 </Button>
+                              
                             )}
                             <div className="space-y-1 text-sm">
                                 <p className="text-slate-600">
@@ -751,78 +877,188 @@ export function DocumentList() {
                 </div>
             )}
 
-            {/* メモダイアログ */}
-            <Dialog open={memoDialogOpen} onOpenChange={setMemoDialogOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+            {/* メモダイアログ（クリック時） */}
+            <Dialog
+                open={memoDialogOpen}
+                onOpenChange={open => {
+                    if (!open) {
+                        closeMemoDialog()
+                    } else {
+                        setMemoDialogOpen(true)
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-[500px] bg-white">
                     <DialogHeader>
-                        <DialogTitle>メモを{selectedDoc?.latestMemo ? '編集' : '追加'}</DialogTitle>
+                        <DialogTitle>
+                            メモ
+                            {selectedDoc
+                                ? ` - ${getDisplaySubject(selectedDoc.subject)}`
+                                : ''}
+                        </DialogTitle>
                         <DialogDescription>
-                            {selectedDoc && getDisplaySubject(selectedDoc.subject)}
+                            この文書に紐づくメモを確認・追加できます
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
-                        <div className="relative">
-                            <textarea
-                                value={memoText}
-                                onChange={(e) => setMemoText(e.target.value)}
-                                placeholder="メモを入力してください..."
-                                className="w-full min-h-[150px] p-3 pr-12 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                                autoFocus
-                            />
-                            {selectedDoc?.latestMemo && (
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setShowDeleteConfirm(true)}
-                                    disabled={savingMemo}
-                                    className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    title="メモを削除"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                    <div className="py-4 space-y-3">
+                        {/* 既存メモ一覧（履歴） */}
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {dialogLoading && (
+                                <p className="text-xs text-slate-500">
+                                    メモを読み込み中...
+                                </p>
+                            )}
+                            {dialogError && (
+                                <p className="text-xs text-red-500">{dialogError}</p>
+                            )}
+                            {selectedDoc &&
+                                hoverMemos[selectedDoc.id] &&
+                                !dialogLoading &&
+                                hoverMemos[selectedDoc.id].length === 0 && (
+                                <p className="text-xs text-slate-500">
+                                    メモは登録されていません
+                                </p>
+                            )}
+                            {selectedDoc &&
+                                hoverMemos[selectedDoc.id] &&
+                                hoverMemos[selectedDoc.id].length > 0 && (
+                                <>
+                                    {hoverMemos[selectedDoc.id].map(memo => (
+                                        <div
+                                            key={memo.memoId}
+                                            className="border border-slate-200 rounded-md px-3 py-2 flex gap-2 items-center bg-slate-50"
+                                        >
+                                            <div className="flex-1 text-xs">
+                                                <div className="mb-1">
+                                                    <span
+                                                        className="
+                                                            inline-flex items-center
+                                                            rounded-full
+                                                            bg-slate-50
+                                                            px-2 py-0.5
+                                                            text-[0.65rem]
+                                                            text-slate-500
+                                                            font-mono
+                                                            tracking-tight
+                                                        "
+                                                    >
+                                                        {formatMemoUpdatedAt(memo.updatedAt)}
+                                                        {/* ここを formatMemoUpdatedAt(memo.updatedAt) にしてもOK */}
+                                                    </span>
+                                                </div>
+                                                <div className="whitespace-pre-wrap text-slate-800">
+                                                    {memo.text}
+                                                </div>
+                                            </div>
+
+                                            {/* 編集ボタン */}
+                                            <Button
+                                                size="icon"
+                                                onClick={() => startEditMemo(memo)}
+                                                disabled={savingMemo}
+                                                className="
+                                                    h-6 w-6 flex-shrink-0 p-0
+                                                    hover:text-slate-500
+                                                    hover:bg-blue-100
+                                                    bg-transparent
+                                                    text-blue-600
+                                                    rounded-md
+                                                    shadow-none
+                                                    border-none
+                                                "
+                                                title="このメモを編集"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </Button>
+
+                                            {/* 削除ボタン */}
+                                            <Button
+                                                size="icon"
+                                                onClick={() =>
+                                                    selectedDoc &&
+                                                    handleDeleteMemoFromList(selectedDoc.id, memo.memoId)
+                                                }
+                                                disabled={savingMemo}
+                                                className="
+                                                    h-6 w-6 flex-shrink-0 p-0
+                                                    text-red-500
+                                                    bg-transparent
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                    rounded-md
+                                                    shadow-none
+                                                    border-none
+                                                "
+                                                title="このメモを削除"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </>
                             )}
                         </div>
-                        {showDeleteConfirm && (
-                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                                <p className="text-sm text-red-800 mb-3">メモを削除しますか？</p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="destructive"
-                                        onClick={deleteMemo}
-                                        disabled={savingMemo}
-                                        className="flex-1"
-                                    >
-                                        {savingMemo ? '削除中...' : '削除する'}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setShowDeleteConfirm(false)}
-                                        disabled={savingMemo}
-                                        className="flex-1"
-                                    >
-                                        キャンセル
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
+
+                        {/* 新規メモ入力欄 */}
+                        <div className="mt-2">
+                            {editingMemoId && (
+                                <p className="mb-1 text-xs text-amber-600">
+                                    過去のメモを編集中です。編集後「更新」を押してください。
+                                </p>
+                            )}
+                            <textarea
+                                value={memoText}
+                                onChange={e => setMemoText(e.target.value)}
+                                placeholder="メモを入力してください..."
+                                className="w-full min-h-[120px] p-3 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                            />
+                        </div>
+
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="flex gap-3">
+                        {/* 閉じるボタン：ダークグレー */}
                         <Button
-                            variant="outline"
+                            type="button"
                             onClick={closeMemoDialog}
                             disabled={savingMemo}
+                            className="
+                            h-9 px-5
+                            rounded-lg
+                            bg-slate-600 text-white
+                            text-sm
+                            hover:bg-slate-700
+                            disabled:bg-slate-400 disabled:text-white/70
+                            shadow-sm
+                            "
                         >
                             閉じる
                         </Button>
+
+                        {/* 保存ボタン：ブルー */}
                         <Button
+                            type="button"
                             onClick={saveMemo}
                             disabled={savingMemo || !memoText.trim()}
+                            className="
+                                h-9 px-5
+                                rounded-lg
+                                bg-blue-500 text-white
+                                text-sm
+                                hover:bg-blue-600
+                                disabled:bg-slate-300 disabled:text-white/70
+                                shadow-sm
+                            "
                         >
-                            {savingMemo ? '保存中...' : '保存'}
+                            {savingMemo
+                                ? editingMemoId
+                                    ? '更新中...'
+                                    : '保存中...'
+                                : editingMemoId
+                                    ? '更新'
+                                    : '保存'}
                         </Button>
                     </DialogFooter>
+
                 </DialogContent>
             </Dialog>
         </div>
