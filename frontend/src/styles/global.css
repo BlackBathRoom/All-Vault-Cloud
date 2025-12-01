@@ -41,6 +41,10 @@ body {
     background-color: #f5f5f5;
 }
 
+button[data-dialog-close] {
+    display: none !important;
+}
+
 button {
     cursor: pointer;
     border: none;
@@ -67,3 +71,7 @@ textarea:focus {
     outline: none;
     border-color: #007bff;
 }
+
+
+  
+  
