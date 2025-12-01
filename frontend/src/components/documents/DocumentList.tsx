@@ -612,14 +612,22 @@ export function DocumentList() {
                                                         e.stopPropagation()
                                                         openMemoDialog(doc)
                                                     }}
-                                                    className={`h-8 w-8 p-0 flex-shrink-0 ${
-                                                        doc.latestMemo
-                                                            ? 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
-                                                            : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
-                                                    }`}
-                                                    title={doc.latestMemo ? 'メモを表示/追加' : 'メモを追加'}
+                                                    className={`
+                                                        h-7 px-2 inline-flex items-center gap-1 rounded-full border text-xs
+                                                        ${
+                                    doc.latestMemo
+                                        // ✅ メモあり：やわらかい黄色系
+                                        ? 'bg-amber-100 text-amber-700 border-amber-500 hover:bg-amber-200 hover:text-amber-800'
+                                        // ✅ メモなし：グレーの点線枠＋「＋メモ」
+                                        : 'bg-slate-50 text-slate-500 border-dashed border-slate-300 hover:bg-slate-200'
+                                    }
+                                                    `}
+                                                    title={doc.latestMemo ? 'メモを表示/編集' : 'メモを追加'}
                                                 >
-                                                    <MessageSquare className="w-4 h-4" />
+                                                    <MessageSquare className="w-3.5 h-3.5" />
+                                                    <span className="hidden lg:inline">
+                                                        {doc.latestMemo ? 'メモあり' : 'メモ追加'}
+                                                    </span>
                                                 </Button>
 
                                                 {/* ホバー時：メモ一覧ポップアップ（一覧） */}
@@ -764,7 +772,7 @@ export function DocumentList() {
                                             e.stopPropagation()
                                             openMemoDialog(doc)
                                         }}
-                                        className="h-6 w-6 p-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 flex-shrink-0"
+                                        className="h-6 w-6 p-0 hover:text-slate-600 hover:bg-slate-300 text-blue-600 bg-blue-100 flex-shrink-0"
                                     >
                                         <Edit3 className="w-3 h-3" />
                                     </Button>
@@ -777,11 +785,17 @@ export function DocumentList() {
                                         e.stopPropagation()
                                         openMemoDialog(doc)
                                     }}
-                                    className="mb-2 text-xs text-blue-200 hover:text-blue-600 hover:bg-blue-50 w-full justify-start"
+                                    className="
+                                            mb-2 w-full justify-start text-xs
+                                            rounded-full border
+                                            bg-slate-50 text-slate-600 border-dashed border-slate-300
+                                            hover:bg-slate-100
+                                            "
                                 >
                                     <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
                                     メモを追加
                                 </Button>
+                              
                             )}
                             <div className="space-y-1 text-sm">
                                 <p className="text-slate-600">
@@ -937,10 +951,10 @@ export function DocumentList() {
                                                 disabled={savingMemo}
                                                 className="
                                                     h-6 w-6 flex-shrink-0 p-0
-                                                    text-slate-500
+                                                    hover:text-slate-500
+                                                    hover:bg-blue-100
                                                     bg-transparent
-                                                    hover:bg-blue-50
-                                                    hover:text-blue-600
+                                                    text-blue-600
                                                     rounded-md
                                                     shadow-none
                                                     border-none
