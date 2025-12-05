@@ -179,13 +179,13 @@ const FaxUploadForm: React.FC = () => {
                     {selectedFile ? (
                         /* デスクトップ用：選択されたファイルの表示 */
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <FileText className="size-12 text-blue-600" />
-                                <div className="text-left">
+                            <div className="flex items-center space-x-4 min-w-0 flex-1">
+                                <FileText className="size-12 text-blue-600 flex-shrink-0" />
+                                <div className="text-left min-w-0 flex-1">
                                     <p className="text-sm text-slate-500 mb-1">
                                         ファイル (画像)
                                     </p>
-                                    <p className="font-medium text-slate-900 mb-1">
+                                    <p className="font-medium text-slate-900 mb-1 truncate" title={selectedFile.name}>
                                         {selectedFile.name}
                                     </p>
                                     <p className="text-sm text-slate-500">
@@ -198,7 +198,7 @@ const FaxUploadForm: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={removeFile}
-                                className="bg-slate-200 hover:bg-slate-300 text-slate-900 border-slate-300 px-4 py-2"
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-900 border-slate-300 px-4 py-2 flex-shrink-0 ml-4"
                             >
                                 削除
                             </Button>
@@ -220,27 +220,25 @@ const FaxUploadForm: React.FC = () => {
                 {/* モバイル用：選択されたファイル表示エリア */}
                 {selectedFile && (
                     <div className="md:hidden bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                                <FileText className="size-10 text-blue-600 flex-shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-xs text-slate-500 mb-1">
-                                        選択されたファイル
-                                    </p>
-                                    <p className="font-medium text-slate-900 mb-1 truncate">
-                                        {selectedFile.name}
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        {formatFileSize(selectedFile.size)}
-                                    </p>
-                                </div>
+                        <div className="flex items-center gap-3">
+                            <FileText className="size-10 text-blue-600 flex-shrink-0" />
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                                <p className="text-xs text-slate-500 mb-1">
+                                    選択されたファイル
+                                </p>
+                                <p className="font-medium text-slate-900 mb-1 truncate text-sm" title={selectedFile.name}>
+                                    {selectedFile.name}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    {formatFileSize(selectedFile.size)}
+                                </p>
                             </div>
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={removeFile}
-                                className="bg-slate-50 hover:bg-slate-100 text-slate-900 border-slate-300 px-3 py-2 ml-2"
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-700 border border-slate-300 hover:border-slate-400 px-3 py-1.5 text-xs flex-shrink-0"
                             >
                                 削除
                             </Button>
