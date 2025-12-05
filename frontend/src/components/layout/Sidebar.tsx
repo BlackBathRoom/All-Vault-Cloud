@@ -77,12 +77,11 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
-              <Button
-                asChild
+              <Link
                 key={item.id}
-                variant="ghost"
+                to={item.to}
                 className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors justify-start',
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors cursor-pointer',
                   currentView === item.id
                     ? 'bg-blue-50 text-blue-600 font-bold'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
@@ -92,11 +91,9 @@ const Sidebar = ({ currentView, onViewChange, isOpen, onClose }: SidebarProps) =
                   onClose();
                 }}
               >
-                <Link to={item.to} className="flex items-center gap-3 w-full h-full">
-                  <Icon className={cn("w-5 h-5", currentView === item.id ? "text-blue-500" : "text-gray-600")} />
-                  <span>{item.label}</span>
-                </Link>
-              </Button>
+                <Icon className={cn("w-5 h-5 flex-shrink-0", currentView === item.id ? "text-blue-500" : "text-gray-600")} />
+                <span className="whitespace-nowrap">{item.label}</span>
+              </Link>
             );
           })}
         </nav>

@@ -880,7 +880,7 @@ export function DocumentList() {
             {/* メモダイアログ（クリック時） */}
             <Dialog
                 open={memoDialogOpen}
-                onOpenChange={open => {
+                onOpenChange={(open: boolean) => {
                     if (!open) {
                         closeMemoDialog()
                     } else {
