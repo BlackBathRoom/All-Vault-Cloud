@@ -10,6 +10,15 @@ import { Document } from '../lib/types'   // ここ重要★
 const TABLE_NAME = process.env.TABLE_NAME || ''
 const BUCKET_NAME = process.env.BUCKET_NAME || ''
 
+// CORS ヘッダー定義
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',  // CloudFront経由なので * で許可
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token, X-Requested-With',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json',
+}
+
 // Document 型ガード（type-safety）
 function isDocument(item: unknown): item is Document {
     if (typeof item !== 'object' || item === null) return false
@@ -34,6 +43,15 @@ export const handler = async (
 
     const { httpMethod: method, path } = event
 
+    // プリフライトリクエスト (OPTIONS) の処理
+    if (method === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ message: 'CORS preflight successful' }),
+        }
+    }
+
     try {
         // -----------------------
         // GET /documents/{id} (詳細 - 先にチェック)
@@ -44,6 +62,7 @@ export const handler = async (
             if (!id) {
                 return {
                     statusCode: 400,
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'Invalid document id' }),
                 }
             }
@@ -58,7 +77,7 @@ export const handler = async (
             if (!result.Item || !isDocument(result.Item)) {
                 return {
                     statusCode: 404,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'Document not found' }),
                 }
             }
@@ -81,12 +100,7 @@ export const handler = async (
 
             return {
                 statusCode: 200,
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                },
+                headers: corsHeaders,
                 body: JSON.stringify({ ...item, pdfUrl }),
             }
         }
@@ -110,12 +124,7 @@ export const handler = async (
 
             return {
                 statusCode: 200,
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                },
+                headers: corsHeaders,
                 body: JSON.stringify(items),
             }
         }
@@ -127,19 +136,24 @@ export const handler = async (
             if (!event.body) {
                 return {
                     statusCode: 400,
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'Body is required' }),
                 }
             }
 
             const body = JSON.parse(event.body) as {
                 fileName?: string
+                fileType?: string
                 contentType?: string
             }
 
-            if (!body.fileName || !body.contentType) {
+            const contentType = body.fileType || body.contentType
+
+            if (!body.fileName || !contentType) {
                 return {
                     statusCode: 400,
-                    body: JSON.stringify({ message: 'fileName and contentType required' }),
+                    headers: corsHeaders,
+                    body: JSON.stringify({ message: 'fileName and fileType (or contentType) required' }),
                 }
             }
 
@@ -148,12 +162,12 @@ export const handler = async (
             const url = await generatePresignedUrl(
                 BUCKET_NAME,
                 key,
-                body.contentType
+                contentType
             )
 
             return {
                 statusCode: 200,
-                headers: { 'Content-Type': 'application/json' },
+                headers: corsHeaders,
                 body: JSON.stringify({ url, key }),
             }
         }
@@ -167,7 +181,7 @@ export const handler = async (
             if (!id || !event.body) {
                 return {
                     statusCode: 400,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'Invalid request' }),
                 }
             }
@@ -203,7 +217,7 @@ export const handler = async (
             if (updateExpression.length === 0) {
                 return {
                     statusCode: 400,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'No fields to update' }),
                 }
             }
@@ -226,10 +240,7 @@ export const handler = async (
 
             return {
                 statusCode: 200,
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
+                headers: corsHeaders,
                 body: JSON.stringify(result.Attributes),
             }
         }
@@ -241,7 +252,7 @@ export const handler = async (
             if (!event.body) {
                 return {
                     statusCode: 400,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'Body is required' }),
                 }
             }
@@ -255,7 +266,7 @@ export const handler = async (
             if (!body.to || !body.subject || !body.body) {
                 return {
                     statusCode: 400,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ 
                         message: 'Missing required fields: to, subject, body' 
                     }),
@@ -290,10 +301,7 @@ export const handler = async (
 
             return {
                 statusCode: 200,
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
+                headers: corsHeaders,
                 body: JSON.stringify({ message: 'Email sent successfully' }),
             }
         }
@@ -307,7 +315,7 @@ export const handler = async (
             if (!id) {
                 return {
                     statusCode: 400,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'Invalid document id' }),
                 }
             }
@@ -322,7 +330,7 @@ export const handler = async (
             if (!getResult.Item || !isDocument(getResult.Item)) {
                 return {
                     statusCode: 404,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ message: 'Document not found' }),
                 }
             }
@@ -333,7 +341,7 @@ export const handler = async (
             if (!document.extractedText && !document.s3Key) {
                 return {
                     statusCode: 400,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ 
                         message: 'Document does not have text content. Please ensure OCR has been performed.' 
                     }),
@@ -355,7 +363,7 @@ export const handler = async (
                 console.error('Bedrock classification error:', error)
                 return {
                     statusCode: 500,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: corsHeaders,
                     body: JSON.stringify({ 
                         message: 'AI classification failed',
                         error: error instanceof Error ? error.message : 'Unknown error'
@@ -382,10 +390,7 @@ export const handler = async (
 
             return {
                 statusCode: 200,
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
+                headers: corsHeaders,
                 body: JSON.stringify({
                     document: updateResult.Attributes,
                     classification: {
@@ -398,6 +403,7 @@ export const handler = async (
 
         return {
             statusCode: 404,
+            headers: corsHeaders,
             body: JSON.stringify({ message: 'Not Found' }),
         }
     } catch (err) {
@@ -405,7 +411,7 @@ export const handler = async (
 
         return {
             statusCode: 500,
-            headers: { 'Content-Type': 'application/json' },
+            headers: corsHeaders,
             body: JSON.stringify({
                 message: 'Internal Server Error',
                 error: String(err),
