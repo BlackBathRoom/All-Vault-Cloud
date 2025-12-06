@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudFront 動作確認</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 2rem; 
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        .test-result {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        .success {
+            background-color: #f0f9ff;
+            border-left-color: #10b981;
+            color: #065f46;
+        }
+        .error {
+            background-color: #fef2f2;
+            border-left-color: #ef4444;
+            color: #991b1b;
+        }
+        .loading {
+            background-color: #fef3c7;
+            border-left-color: #f59e0b;
+            color: #92400e;
+        }
+        .button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+        .button:hover {
+            background-color: #2563eb;
+        }
+        pre {
+            background-color: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 CloudFront 動作確認テスト</h1>
+        <p>All Vault Cloud のCloudFront設定が正しく動作しているかテストします。</p>
+        
+        <div>
+            <button class="button" onclick="testFrontend()">フロントエンド確認</button>
+            <button class="button" onclick="testAPI()">API確認</button>
+            <button class="button" onclick="testAll()">全テスト実行</button>
+            <button class="button" onclick="clearResults()">結果クリア</button>
+        </div>
+        
+        <div id="test-results"></div>
+        
+        <h3>📋 テスト詳細</h3>
+        <div id="test-details"></div>
+    </div>
+
+    <script>
+        const results = document.getElementById('test-results');
+        const details = document.getElementById('test-details');
+        
+        function addResult(message, type = 'success') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function addDetails(content) {
+            details.innerHTML += content;
+        }
+        
+        function clearResults() {
+            results.innerHTML = '';
+            details.innerHTML = '';
+        }
+        
+        async function testFrontend() {
+            addResult('🔄 フロントエンド確認中...', 'loading');
+            
+            try {
+                // 現在のページが正常に表示されていることを確認
+                addResult('✅ フロントエンド: 正常表示 (このページが表示されています)');
+                
+                // 現在のURL情報を表示
+                const currentURL = window.location.href;
+                addDetails(`<p><strong>現在のURL:</strong> ${currentURL}</p>`);
+                
+                // ユーザーエージェント確認
+                const userAgent = navigator.userAgent;
+                const isMobile = /Mobile|Android|iPhone|iPad/.test(userAgent);
+                addDetails(`<p><strong>デバイス:</strong> ${isMobile ? 'モバイル' : 'デスクトップ'}</p>`);
+                
+            } catch (error) {
+                addResult(`❌ フロントエンド: エラー - ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAPI() {
+            addResult('🔄 API確認中...', 'loading');
+            
+            try {
+                // API エンドポイントテスト
+                addDetails('<h4>📡 API テスト結果:</h4>');
+                
+                // 1. PDF一覧API
+                const pdfResponse = await fetch('/api/uploads/pdf');
+                addDetails(`<p>GET /api/uploads/pdf - Status: ${pdfResponse.status}</p>`);
+                
+                if (pdfResponse.ok) {
+                    const pdfData = await pdfResponse.json();
+                    addResult(`✅ API (PDF一覧): 正常動作 (${pdfData.files?.length || 0}件)`);
+                    addDetails(`<pre>${JSON.stringify(pdfData, null, 2)}</pre>`);
+                } else {
+                    addResult(`❌ API (PDF一覧): HTTPエラー ${pdfResponse.status}`, 'error');
+                }
+                
+                // 2. 署名付きURL API (POST)
+                const presignedResponse = await fetch('/api/uploads/presigned-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        fileName: 'test.jpg',
+                        fileType: 'image/jpeg'
+                    })
+                });
+                
+                addDetails(`<p>POST /api/uploads/presigned-url - Status: ${presignedResponse.status}</p>`);
+                
+                if (presignedResponse.ok) {
+                    const presignedData = await presignedResponse.json();
+                    addResult('✅ API (署名付きURL): 正常動作');
+                    addDetails(`<pre>${JSON.stringify(presignedData, null, 2)}</pre>`);
+                } else {
+                    addResult(`❌ API (署名付きURL): HTTPエラー ${presignedResponse.status}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ API: ネットワークエラー - ${error.message}`, 'error');
+                addDetails(`<p>エラー詳細: ${error.stack}</p>`);
+            }
+        }
+        
+        async function testAll() {
+            clearResults();
+            addResult('🚀 全テストを実行中...', 'loading');
+            
+            await testFrontend();
+            await testAPI();
+            
+            addResult('🎉 全テスト完了');
+        }
+        
+        // ページ読み込み時に基本情報を表示
+        window.onload = function() {
+            const now = new Date();
+            addDetails(`<p><strong>テスト実行時刻:</strong> ${now.toLocaleString('ja-JP')}</p>`);
+            
+            // CloudFront or 開発環境の判定
+            const isCloudFront = window.location.hostname.includes('cloudfront.net') || 
+                               window.location.hostname === 'all-vault-cloud.com';
+            const environment = isCloudFront ? '本番 (CloudFront)' : '開発環境';
+            addDetails(`<p><strong>環境:</strong> ${environment}</p>`);
+        };
+    </script>
+</body>
+</html>
