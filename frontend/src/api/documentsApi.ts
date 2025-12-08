@@ -62,16 +62,8 @@ const isEmptyText = (text: string | null | undefined): boolean => {
 // ----------------------
 export const getDocuments = async (): Promise<Document[]> => {
     try {
-        const response = await apiClient.get('/documents')
-
-        // axios 形式でも fetch 形式でも正しく取れる
-        const raw = unwrapData<DocumentsResponse>(response)
-
-        const apiDocs = Array.isArray(raw)
-            ? raw
-            : raw.documents ?? []
-
-        return apiDocs.map((d): Document => ({
+        const response = await apiClient.get('/documents') as { files: ApiDocument[] }
+        return response.files.map((d): Document => ({
             id: d.id,
             type: d.type,
             subject: d.subject,
