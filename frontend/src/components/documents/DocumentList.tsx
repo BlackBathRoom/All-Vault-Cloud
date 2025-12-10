@@ -45,6 +45,7 @@ import {
     getDocumentMemos,
     deleteDocumentMemo,
     updateDocumentMemo,
+    ApiDocument,
 } from '../../api/documentsApi'
 import {
     Document,
@@ -116,7 +117,7 @@ const formatMemoUpdatedAt = (isoString: string): string => {
 }
 
 export function DocumentList() {
-    const [documents, setDocuments] = useState<Document[]>([])
+    const [documents, setDocuments] = useState<ApiDocument[]>([])
     const [loading, setLoading] = useState(false)
 
     const [filterType, setFilterType] = useState<string>('all')
@@ -128,7 +129,7 @@ export function DocumentList() {
 
     // メモダイアログ用
     const [memoDialogOpen, setMemoDialogOpen] = useState(false)
-    const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+    const [selectedDoc, setSelectedDoc] = useState<ApiDocument | null>(null)
     const [memoText, setMemoText] = useState<string>('')
     const [savingMemo, setSavingMemo] = useState(false)
     const [editingMemoId, setEditingMemoId] = useState<string | null>(null)
@@ -231,7 +232,7 @@ export function DocumentList() {
 
     // フィルタ＆検索
     let filteredDocuments = documents.filter(doc => {
-        const matchesType = filterType === 'all' || doc.type === filterType
+        const matchesType = filterType === 'all' || doc.category === filterType
         const displaySubject = getDisplaySubject(doc.subject)
         const matchesSearch =
             searchQuery === '' ||
@@ -271,7 +272,7 @@ export function DocumentList() {
     })
 
     // ファイルダウンロード処理
-    const handleDownload = (document: Document) => {
+    const handleDownload = (document: ApiDocument) => {
         if (document.fileUrl) {
             console.log('📅 ファイルダウンロード:', document.subject)
             window.open(document.fileUrl, '_blank')
@@ -281,13 +282,7 @@ export function DocumentList() {
         }
     }
 
-    // ファイルサイズ表示
-    const formatFileSize = (bytes: number | null | undefined): string => {
-        if (!bytes || bytes === 0) return '-'
-        const sizes = ['B', 'KB', 'MB', 'GB']
-        const i = Math.floor(Math.log(bytes) / Math.log(1024))
-        return `${Math.round((bytes / Math.pow(1024, i)) * 100) / 100} ${sizes[i]}`
-    }
+    
 
     // ★ 共通：メモ一覧読み込み（ホバー・ダイアログ両方から使用）
     const loadMemos = async (docId: string, options?: { force?: boolean }) => {
@@ -303,15 +298,13 @@ export function DocumentList() {
             setHoverMemos(prev => ({ ...prev, [docId]: memos }))
 
             // latestMemo もここで同期しておく
-            const last = memos.length ? memos[memos.length - 1] : null
+            const last = memos.length ? memos[memos.length - 1] : undefined
             setDocuments(prev =>
                 prev.map(doc =>
                     doc.id === docId
                         ? {
                             ...doc,
                             latestMemo: last
-                                ? { text: last.text, updatedAt: last.updatedAt }
-                                : null,
                         }
                         : doc,
                 ),
@@ -327,7 +320,7 @@ export function DocumentList() {
     }
 
     // ホバー開始
-    const handleMemoMouseEnter = (doc: Document) => {
+    const handleMemoMouseEnter = (doc: ApiDocument) => {
         setHoveredDocId(doc.id)
         void loadMemos(doc.id)
     }
@@ -338,7 +331,7 @@ export function DocumentList() {
     }
 
     // メモダイアログを開く（クリック時）
-    const openMemoDialog = (doc: Document) => {
+    const openMemoDialog = (doc: ApiDocument) => {
         setSelectedDoc(doc)
         setMemoText('')
         setMemoDialogOpen(true)
@@ -587,7 +580,7 @@ export function DocumentList() {
                                     >
                                         <TableCell className="py-2 px-3">
                                             <div className="flex flex-col gap-1.5">
-                                                {getTypeBadge(doc.type)}
+                                                {getTypeBadge(doc.category)}
                                                 {doc.tags && doc.tags.length > 0 && (
                                                     <div className="flex flex-wrap gap-1">
                                                         {doc.tags.map(tag => (
@@ -741,7 +734,7 @@ export function DocumentList() {
                         >
                             <div className="flex items-start justify-between mb-3">
                                 <div className="flex flex-col gap-2">
-                                    {getTypeBadge(doc.type)}
+                                    {getTypeBadge(doc.category)}
                                     {doc.tags && doc.tags.length > 0 && (
                                         <div className="flex flex-wrap gap-1">
                                             {doc.tags.map(tag => (
@@ -809,12 +802,6 @@ export function DocumentList() {
                                     <span className="text-slate-500">受信日時:</span>{' '}
                                     {formatDateTime(doc.receivedAt)}
                                 </p>
-                                {doc.fileSize && (
-                                    <p className="text-slate-600">
-                                        <span className="text-slate-500">ファイルサイズ:</span>{' '}
-                                        {formatFileSize(doc.fileSize)}
-                                    </p>
-                                )}
                             </div>
                         </div>
                     ))

@@ -1,23 +1,18 @@
 import { apiClient } from './client'
-import type { Document } from '../types/document'
 // ----------------------
 // APIレスポンス型
 // ----------------------
 export type ApiDocument = {
   id: string
-  type: 'fax' | 'email' | 'document'
   subject: string
-  sender: string
   receivedAt: string
-  s3Key: string
-  fileUrl: string | null
-  fileSize: number | null
+  fileUrl: string 
   tags?: string[]
-  category?: string
-  latestMemo: {
+  category: "fax" | "email"
+  latestMemo?: {
     text: string
     updatedAt: string
-  } | null
+  };
 }
 
 export type DocumentsResponse =
@@ -60,35 +55,10 @@ const isEmptyText = (text: string | null | undefined): boolean => {
 // ----------------------
 // 文書一覧 GET /documents
 // ----------------------
-export const getDocuments = async (): Promise<Document[]> => {
+export const getDocuments = async (): Promise<ApiDocument[]> => {
     try {
-        const response = await apiClient.get('/documents')
-
-        // axios 形式でも fetch 形式でも正しく取れる
-        const raw = unwrapData<DocumentsResponse>(response)
-
-        const apiDocs = Array.isArray(raw)
-            ? raw
-            : raw.documents ?? []
-
-        return apiDocs.map((d): Document => ({
-            id: d.id,
-            type: d.type,
-            subject: d.subject,
-            sender: d.sender,
-            receivedAt: d.receivedAt,
-            s3Key: d.s3Key,
-            fileUrl: d.fileUrl ?? undefined,
-            fileSize: d.fileSize ?? undefined,
-            tags: d.tags,
-            category: d.category as Document['category'],
-
-            // 空メモは null 扱いにする
-            latestMemo:
-            d.latestMemo && !isEmptyText(d.latestMemo.text)
-                ? d.latestMemo
-                : null,
-        }))
+        const response = await apiClient.get('/documents') as { files: ApiDocument[] }
+        return response.files
     } catch (error) {
         console.error('❌ Documents API エラー:', error)
         throw new Error('文書一覧の取得に失敗しました')

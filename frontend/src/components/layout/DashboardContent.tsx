@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "../ui/card";
 import { Badge } from "../ui/badge";
-import { getDocuments } from "../../api/documentsApi";
+import { ApiDocument, getDocuments } from "../../api/documentsApi";
 import type { Document } from "../../types/document";
 
 interface DashboardContentProps {
@@ -47,7 +47,7 @@ const formatDateTime = (dateString: string): string => {
 };
 
 export function DashboardContent({ currentView }: DashboardContentProps) {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<ApiDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,8 +73,8 @@ export function DashboardContent({ currentView }: DashboardContentProps) {
 
   // --- 集計 ---
   const totalCount = documents.length;
-  const faxCount = documents.filter((d) => d.type === "fax").length;
-  const emailCount = documents.filter((d) => d.type === "email").length;
+  const faxCount = documents.filter((d) => d.category === "fax").length;
+  const emailCount = documents.filter((d) => d.category === "email").length;
 
   const stats = [
     {
@@ -190,9 +190,9 @@ export function DashboardContent({ currentView }: DashboardContentProps) {
 
           {!loading && recentDocuments.length > 0 && (
             <div className="space-y-3">
-              {recentDocuments.map((doc) => (
+              {recentDocuments.map((doc, i) => (
                 <div
-                  key={doc.id}
+                  key={`doc.subject-${i}`}
                   className="flex flex-col gap-1 border-b border-slate-100 pb-2 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
@@ -209,10 +209,10 @@ export function DashboardContent({ currentView }: DashboardContentProps) {
                   <Badge
                     variant="outline"
                     className={`mt-1 w-fit self-start text-xs sm:self-center ${getTypeBadgeClass(
-                      doc.type
+                      doc.category
                     )}`}
                   >
-                    {getTypeLabel(doc.type)}
+                    {getTypeLabel(doc.category)}
                   </Badge>
                 </div>
               ))}
